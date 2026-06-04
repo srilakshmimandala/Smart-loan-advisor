@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Loan Advisor — Recommendation Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+        <!-- Bank Roof -->
+        <path d="M3 10L12 3L21 10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Bank Base -->
+        <path d="M5 21H13" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Bank Columns -->
+        <path d="M7 21V10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <path d="M11 21V10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Rupee Coin (Circle) -->
+        <circle cx="17" cy="17" r="5" fill="#04040f" stroke="url(#logo-grad)" stroke-width="1.5"/>
+        <!-- Rupee Symbol -->
+        <text x="17" y="20" font-family="'Plus Jakarta Sans', sans-serif" font-size="8.5" font-weight="800" fill="url(#logo-grad)" text-anchor="middle">₹</text>
+        <defs>
+          <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00f2fe" />
+            <stop offset="100%" stop-color="#8b5cf6" />
+          </linearGradient>
+        </defs>
+      </svg>
+      Smart Loan <span>Advisor</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="chat.html" class="nav-btn"><i class="fa-solid fa-comments"></i> Start Intake</a>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- Empty State / No Profile Selected -->
+    <div id="emptyState" class="glass-panel" style="display: none; padding: 60px; text-align: center; max-width: 600px; margin: 40px auto;">
+      <i class="fa-solid fa-user-slash" style="font-size: 48px; color: var(--accent-gold); margin-bottom: 20px;"></i>
+      <h2 style="margin-bottom: 12px;">No Active Customer Session</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 30px;">To view eligibility, cost comparisons, and personalized AI loan recommendations, please complete a customer intake session first.</p>
+      <a href="chat.html" class="primary-btn"><i class="fa-solid fa-comments"></i> Start Customer Intake</a>
+    </div>
+
+    <!-- Dashboard Content Wrapper (Initially hidden, shown when profile loads) -->
+    <div id="dashboardContent" style="display: none;">
+      
+      <!-- Profile Header Summary -->
+      <div class="profile-summary-header glass-panel">
+        <div class="profile-meta">
+          <p>CUSTOMER PROFILE</p>
+          <h2 id="clientName">Loading Customer...</h2>
+          <p id="clientMeta">Age: -- | City: -- | Employment: --</p>
+        </div>
+        <div class="score-gauge-container">
+          <div class="score-label">
+            <h3 id="clientCreditScore">---</h3>
+            <p id="clientCreditLabel">CREDIT SCORE</p>
+          </div>
+          <!-- Simple CSS Ring Gauge -->
+          <div class="score-ring" id="scoreRing" style="position: relative; width: 60px; height: 60px; border-radius: 50%; background: conic-gradient(var(--accent-gold) 0%, rgba(255,255,255,0.05) 0%); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-gauge-high" style="color: var(--accent-gold); font-size: 18px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eligibility Panel -->
+      <div class="dashboard-section">
+        <div class="section-title">
+          <h3>Loan Eligibility Status <span>Policy Rule Checks</span></h3>
+        </div>
+        <div class="eligibility-panel" id="eligibilityGrid">
+          <!-- Dynamically populated eligibility cards -->
+          <div class="eligibility-card glass-panel">
+            <h4>Home Loan</h4>
+            <span class="badge conditional">Checking...</span>
+          </div>
+          <div class="eligibility-card glass-panel">
+            <h4>Personal Loan</h4>
+            <span class="badge conditional">Checking...</span>
+          </div>
+          <div class="eligibility-card glass-panel">
+            <h4>Auto Loan</h4>
+            <span class="badge conditional">Checking...</span>
+          </div>
+          <div class="eligibility-card glass-panel">
+            <h4>Education Loan</h4>
+            <span class="badge conditional">Checking...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Two-Column Grid -->
+      <div class="dashboard-grid">
+        
+        <!-- Left Column: Core recommendations, comparisons & tracking -->
+        <div class="grid-left-col">
+          
+          <!-- Recommendation Cards -->
+          <div class="dashboard-section">
+            <div class="section-title">
+              <h3>Top Loan Recommendations <span>Tailored Matches</span></h3>
+              <button id="downloadReportBtn" class="secondary-btn" style="padding: 6px 16px; font-size: 13px; border-radius: 6px;">
+                <i class="fa-solid fa-file-pdf"></i> Download PDF Report
+              </button>
+            </div>
+            <div class="recommendation-cards" id="recommendationsContainer">
+              <!-- Dynamically populated recommendations -->
+              <div class="rec-card glass-panel rank-1">
+                <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                  <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px;"></i> Loading recommendations...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost Comparison Charts -->
+          <div class="dashboard-section">
+            <div class="section-title">
+              <h3>Financial Cost Comparison <span>Side-by-Side Analysis</span></h3>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="glass-panel dashboard-widget">
+                <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-wallet" style="color: var(--accent-gold);"></i> Monthly EMI Comparison
+                </h4>
+                <div class="chart-container">
+                  <canvas id="emiChart"></canvas>
+                </div>
+              </div>
+              <div class="glass-panel dashboard-widget">
+                <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-coins" style="color: var(--accent-gold);"></i> Total Cost Breakdown
+                </h4>
+                <div class="chart-container">
+                  <canvas id="costBreakdownChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kanban Application Board -->
+          <div class="dashboard-section">
+            <div class="section-title">
+              <h3>Application Status Tracker <span>Interactive Kanban Board</span></h3>
+            </div>
+            <div class="kanban-board">
+              <!-- Applied Lane -->
+              <div class="kanban-column" data-status="Applied" id="kanban-Applied">
+                <h4>Applied</h4>
+                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                  <!-- Dynamically populated applied cards -->
+                </div>
+              </div>
+              <!-- Under Review Lane -->
+              <div class="kanban-column" data-status="Under Review" id="kanban-Under Review">
+                <h4>Under Review</h4>
+                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                  <!-- Dynamically populated under review cards -->
+                </div>
+              </div>
+              <!-- Approved Lane -->
+              <div class="kanban-column" data-status="Approved" id="kanban-Approved">
+                <h4>Approved</h4>
+                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                  <!-- Dynamically populated approved cards -->
+                </div>
+              </div>
+              <!-- Rejected Lane -->
+              <div class="kanban-column" data-status="Rejected" id="kanban-Rejected">
+                <h4>Rejected</h4>
+                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                  <!-- Dynamically populated rejected cards -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Widgets, Simulator & Improvement Plan -->
+        <div class="grid-right-col">
+          
+          <!-- Interactive EMI Calculator Widget -->
+          <div class="dashboard-section">
+            <div class="glass-panel calc-widget">
+              <h3 style="font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-calculator" style="color: var(--accent-gold);"></i> EMI & DTI Estimator
+              </h3>
+              
+              <div class="calc-control">
+                <label>Loan Amount (INR) <span id="valAmount">500,000</span></label>
+                <input type="range" id="sliderAmount" class="range-slider" min="100000" max="10000000" step="50000" value="500000">
+              </div>
+
+              <div class="calc-control">
+                <label>Interest Rate (% P.A.) <span id="valRate">9.5%</span></label>
+                <input type="range" id="sliderRate" class="range-slider" min="5" max="25" step="0.1" value="9.5">
+              </div>
+
+              <div class="calc-control">
+                <label>Tenure (Years) <span id="valTenure">5 Years</span></label>
+                <input type="range" id="sliderTenure" class="range-slider" min="1" max="30" step="1" value="5">
+              </div>
+
+              <div class="calc-result-box">
+                <p>Estimated Monthly EMI</p>
+                <h2 id="calcEmi">₹10,501</h2>
+                <div style="margin-top: 12px; font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                  <span>New DTI Ratio:</span>
+                  <span id="calcDti" style="font-weight: 600; color: var(--color-eligible);">--%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- What-If Scenario Simulator -->
+          <div class="dashboard-section">
+            <div class="glass-panel dashboard-widget">
+              <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-gold);"></i> "What If" Simulator
+              </h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;">
+                Simulate changes to parameters to see real-time eligibility updates.
+              </p>
+              
+              <div class="calc-control">
+                <label>Simulated Income (Monthly) <span id="simValIncome">₹--</span></label>
+                <input type="range" id="simIncome" class="range-slider" min="15000" max="500000" step="5000" value="50000">
+              </div>
+
+              <div class="calc-control">
+                <label>Simulated Loan Amount <span id="simValAmount">₹--</span></label>
+                <input type="range" id="simAmount" class="range-slider" min="100000" max="10000000" step="50000" value="1000000">
+              </div>
+
+              <div class="calc-control">
+                <label>Simulated Tenure (Years) <span id="simValTenure">-- Years</span></label>
+                <input type="range" id="simTenure" class="range-slider" min="1" max="30" step="1" value="10">
+              </div>
+
+              <button id="runSimBtn" class="primary-btn" style="width: 100%; justify-content: center; margin-top: 10px;">
+                <i class="fa-solid fa-play"></i> Recalculate Scenario
+              </button>
+
+              <div id="simResultBox" style="display: none; margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px;">
+                <h4 style="font-size: 13px; color: var(--text-primary); margin-bottom: 8px; border-bottom: 1px solid var(--border-glass); padding-bottom: 4px;">Simulation Results:</h4>
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.8;">
+                  <div>DTI Ratio: <strong id="simResultDti" style="color: var(--accent-gold);">--%</strong></div>
+                  <div id="simResultAdvisory" style="margin-top: 6px; font-style: italic; color: var(--text-primary);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loan Improvement Advisor (3-Month Action Plan) -->
+          <div class="dashboard-section">
+            <div class="glass-panel dashboard-widget">
+              <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-graduation-cap" style="color: var(--accent-gold);"></i> Loan Improvement Advisor
+              </h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+                Personalized 3-month action plan to boost eligibility and credit standing.
+              </p>
+              
+              <div class="timeline" id="timelineContainer">
+                <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px;">
+                  <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px;"></i> Generating action plan...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sessions / Global History Sidebar -->
+          <div class="dashboard-section">
+            <div class="glass-panel dashboard-widget">
+              <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> Session History
+              </h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+                Load data from previous customer intake runs.
+              </p>
+              <div class="history-list" id="historyListContainer">
+                <!-- Dynamically populated session history -->
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+                  No sessions found.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Loan Advisor — Conversational Intake</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+        <!-- Bank Roof -->
+        <path d="M3 10L12 3L21 10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Bank Base -->
+        <path d="M5 21H13" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Bank Columns -->
+        <path d="M7 21V10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <path d="M11 21V10" stroke="url(#logo-grad)" stroke-width="2"/>
+        <!-- Rupee Coin (Circle) -->
+        <circle cx="17" cy="17" r="5" fill="#04040f" stroke="url(#logo-grad)" stroke-width="1.5"/>
+        <!-- Rupee Symbol -->
+        <text x="17" y="20" font-family="'Plus Jakarta Sans', sans-serif" font-size="8.5" font-weight="800" fill="url(#logo-grad)" text-anchor="middle">₹</text>
+        <defs>
+          <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00f2fe" />
+            <stop offset="100%" stop-color="#8b5cf6" />
+          </linearGradient>
+        </defs>
+      </svg>
+      Smart Loan <span>Advisor</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="chat.html" class="nav-btn active"><i class="fa-solid fa-comments"></i> Start Intake</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="chat-wrapper glass-panel">
+      <!-- Progress Bar -->
+      <div class="progress-bar-container">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      
+      <!-- Conversational Box -->
+      <div id="chatBox" class="chat-box">
+        <!-- Greeting from Bot will be inserted here dynamically -->
+      </div>
+      
+      <!-- Interactive Inputs -->
+      <div id="inputArea" class="chat-input-area">
+        <input type="text" id="userInput" placeholder="Type your response..." autocomplete="off" />
+        <button id="sendBtn" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+      
+      <!-- Container for Quick Replies buttons -->
+      <div id="quickReplies" class="quick-replies" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Loading Overlay for Pipeline execution -->
+  <div id="loaderOverlay" class="loader-overlay">
+    <div class="loader-circle"></div>
+    <div id="loaderText" class="loader-text">Analyzing your profile...</div>
+    <div id="loaderSubtext" class="loader-subtext">Agent 1: Collecting and sanitizing financial details...</div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    // Initialize the chat flow on page load
+    document.addEventListener("DOMContentLoaded", () => {
+      initChatFlow();
+    });
+  </script>
+</body>
+</html>

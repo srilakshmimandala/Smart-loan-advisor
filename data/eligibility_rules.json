@@ -1,0 +1,119 @@
+{
+  "Personal Loan": {
+    "min_age": 21,
+    "max_age": 60,
+    "min_credit_score": 600,
+    "min_monthly_income": 20000,
+    "required_documents": [
+      "PAN Card",
+      "Aadhaar Card",
+      "Salary Slips (Last 3 Months)",
+      "Bank Statement (Last 6 Months)"
+    ],
+    "disqualifying_conditions": [
+      "Any default in the last 12 months",
+      "Active bankruptcy status",
+      "Debt-to-Income (DTI) ratio exceeding 55%"
+    ]
+  },
+  "Home Loan": {
+    "min_age": 21,
+    "max_age": 70,
+    "min_credit_score": 700,
+    "min_monthly_income": 45000,
+    "required_documents": [
+      "Identity & Address Proof",
+      "Property Agreement & Title Deed",
+      "Income Tax Returns (ITR - Last 2 Years)",
+      "Bank Statement (Last 6 Months)"
+    ],
+    "disqualifying_conditions": [
+      "Credit score below 650",
+      "Property without clear legal title",
+      "Unstable employment (less than 2 years total experience)",
+      "Debt-to-Income (DTI) ratio exceeding 50%"
+    ]
+  },
+  "Education Loan": {
+    "min_age": 18,
+    "max_age": 35,
+    "min_credit_score": 650,
+    "min_monthly_income": 25000,
+    "required_documents": [
+      "Admission Letter from recognized institution",
+      "Fee Breakup Schedule",
+      "Academic Marksheets (10th/12th/Graduation)",
+      "Co-applicant Income Proof & KYC"
+    ],
+    "disqualifying_conditions": [
+      "Institution not recognized by regulatory bodies",
+      "Co-applicant has default history",
+      "No co-applicant provided (for courses in domestic institutions)"
+    ]
+  },
+  "Vehicle Loan": {
+    "min_age": 21,
+    "max_age": 65,
+    "min_credit_score": 680,
+    "min_monthly_income": 25000,
+    "required_documents": [
+      "KYC Documents (Identity & Address)",
+      "Salary Slips or ITR",
+      "Vehicle Proforma Invoice",
+      "Bank Statement (Last 3 Months)"
+    ],
+    "disqualifying_conditions": [
+      "Credit score below 600",
+      "Vehicle is not for personal or registered business use",
+      "Debt-to-Income (DTI) ratio exceeding 50%"
+    ]
+  },
+  "Car Loan": {
+    "min_age": 21,
+    "max_age": 65,
+    "min_credit_score": 650,
+    "min_monthly_income": 15000,
+    "required_documents": [
+      "KYC Documents (Identity & Address)",
+      "Salary Slips or ITR",
+      "Vehicle Proforma Invoice",
+      "Bank Statement (Last 3 Months)"
+    ],
+    "disqualifying_conditions": [
+      "Credit score below 600",
+      "Vehicle is not for personal or registered business use",
+      "Debt-to-Income (DTI) ratio exceeding 50%"
+    ]
+  },
+  "Business Loan": {
+    "min_age": 25,
+    "max_age": 65,
+    "min_credit_score": 700,
+    "min_monthly_income": 75000,
+    "required_documents": [
+      "Business Registration Certificate (GST/MSME)",
+      "ITR & Audited Financials (Last 2 Years)",
+      "Business Bank Statement (Last 12 Months)",
+      "Owner KYC Documents"
+    ],
+    "disqualifying_conditions": [
+      "Business vintage less than 3 years",
+      "Negative net worth in audited financials",
+      "Defaults on existing commercial credits"
+    ]
+  },
+  "Gold Loan": {
+    "min_age": 18,
+    "max_age": 75,
+    "min_credit_score": 300,
+    "min_monthly_income": 0,
+    "required_documents": [
+      "KYC Documents (PAN Card, Aadhaar Card or Voter ID)",
+      "Gold Ornaments for valuation"
+    ],
+    "disqualifying_conditions": [
+      "Gold purity below 18 carats",
+      "Stolen or disputed gold ownership"
+    ]
+  }
+}
