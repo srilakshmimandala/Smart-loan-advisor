@@ -1,7 +1,5 @@
 crewai==0.76.9
 langchain>=0.1.0
-langchain-google-genai>=1.0.0
-google-generativeai>=0.5.0
 pandas>=2.0.0
 flask>=3.0.0
 flask-cors>=4.0.0
