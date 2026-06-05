@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from backend.database import get_all_loan_products, update_application_status, get_applications
+from database import get_all_loan_products, update_application_status, get_applications
 from utils.logger import get_logger
 
 logger = get_logger("LoansRoutes")

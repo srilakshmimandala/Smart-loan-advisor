@@ -1,15 +1,21 @@
 import os
+import sys
+
+# Ensure backend and root are in the sys.path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 # Database initialization
-from backend.database import init_db, get_past_sessions
+from database import init_db, get_past_sessions
 
 # Blueprint imports
-from backend.routes.customer import customer_bp
-from backend.routes.loans import loans_bp
-from backend.routes.recommendations import recommendations_bp
+from routes.customer import customer_bp
+from routes.loans import loans_bp
+from routes.recommendations import recommendations_bp
 
 # Load environment variables
 load_dotenv()

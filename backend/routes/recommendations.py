@@ -1,7 +1,7 @@
 import os
 import json
 from flask import Blueprint, request, jsonify, send_file
-from backend.database import get_recommendations, get_customer_profile, get_all_loan_products
+from database import get_recommendations, get_customer_profile, get_all_loan_products
 from crew_main import run_loan_advisory_pipeline
 from utils.logger import get_logger
 from utils.emi_calculator import calculate_emi, calculate_total_interest, calculate_affordability_ratio
@@ -77,7 +77,7 @@ def get_customer_recommendations(customer_id):
                 
         if needs_generation:
             from crew_main import generate_recommendation_details, run_loan_advisory_pipeline
-            from backend.database import save_recommendations
+            from database import save_recommendations
             
             comparison_data = data.get("comparison_data") if data else {}
             eligibility_data = data.get("eligibility_data") if data else {}

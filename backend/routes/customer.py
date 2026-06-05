@@ -1,6 +1,6 @@
 import json
 from flask import Blueprint, request, jsonify
-from backend.database import save_customer_profile, get_customer_profile, get_past_sessions
+from database import save_customer_profile, get_customer_profile, get_past_sessions
 from utils.logger import get_logger
 from utils.llm_client import get_raw_gemini_model
 
