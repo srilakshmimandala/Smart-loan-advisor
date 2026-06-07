@@ -23,6 +23,18 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing for the frontend
 
+from flask import send_from_directory
+import os
+
+# Serve frontend static files
+@app.route('/')
+def index():
+    return send_from_directory('../frontend', 'chat.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('../frontend', filename)
+
 # Register Blueprints
 app.register_blueprint(customer_bp, url_prefix="/api/customer")
 app.register_blueprint(loans_bp, url_prefix="/api/loans")
