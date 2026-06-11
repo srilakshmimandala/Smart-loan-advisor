@@ -21,6 +21,7 @@ from routes.recommendations import recommendations_bp
 load_dotenv()
 
 app = Flask(__name__)
+app.config['TIMEOUT'] = 300
 CORS(app)  # Enable Cross-Origin Resource Sharing for the frontend
 
 from flask import send_from_directory

@@ -26,7 +26,10 @@ def run_pipeline():
             return jsonify({"status": "error", "message": "Customer profile not found in database."}), 404
             
         # Run sequential CrewAI pipeline
-        result = run_loan_advisory_pipeline(profile, customer_id=customer_id)
+        try:
+            result = run_loan_advisory_pipeline(profile, customer_id=customer_id)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
         
         if result.get("status") == "success":
             try:
