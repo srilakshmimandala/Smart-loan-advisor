@@ -147,13 +147,20 @@ def get_langchain_groq_model(model_name="llama3-8b-8192", temperature=0.2):
         logger.error(f"Failed to initialize ChatGroq model: {str(e)}")
         raise e
 
-def get_crewai_llm(model_name="llama3-8b-8192"):
-    """
-    Returns the Groq model string identifier for CrewAI (using LiteLLM).
-    """
-    if not api_key or api_key == "your_groq_api_key_here":
-        raise ValueError("GROQ_API_KEY is missing from environment.")
-    return f"groq/{model_name}"
+def get_crewai_llm():
+    try:
+        from crewai import LLM as CrewLLM
+        return CrewLLM(
+            model="groq/llama-3.1-8b-instant",
+            api_key=os.getenv("GROQ_API_KEY"),
+            temperature=0.3
+        )
+    except ImportError:
+        return ChatGroq(
+            api_key=os.getenv("GROQ_API_KEY"),
+            model_name="llama-3.1-8b-instant",
+            temperature=0.3
+        )
 
 class GroqRawWrapper:
     """
