@@ -1,5 +1,5 @@
 // API Base URL
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = '';
 
 // Global Chart variables for dashboard updates
 let emiChartInstance = null;
