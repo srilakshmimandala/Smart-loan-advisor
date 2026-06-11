@@ -227,7 +227,7 @@ def run_loan_advisory_pipeline(raw_profile, customer_id=None, pdf_path=None):
         
         crew_1 = Crew(agents=[collector_agent], tasks=[collector_task], process=Process.sequential)
         collector_output = crew_1.kickoff()
-        time.sleep(5)
+        time.sleep(3)
         
         validated_profile = safe_parse_json(extract_json_block(collector_output))
         
@@ -269,7 +269,7 @@ def run_loan_advisory_pipeline(raw_profile, customer_id=None, pdf_path=None):
         
         crew_2 = Crew(agents=[analyzer_agent], tasks=[analyzer_task], process=Process.sequential)
         analyzer_output = crew_2.kickoff()
-        time.sleep(5)
+        time.sleep(3)
         
         eligibility_results = safe_parse_json(extract_json_block(analyzer_output))
         log_agent_action("EligibilityAnalyzerAgent", "Eligibility Check", "SUCCESS", f"Eligible for {len(eligibility_results.get('eligible_products', []))} products.")
@@ -291,11 +291,75 @@ def run_loan_advisory_pipeline(raw_profile, customer_id=None, pdf_path=None):
         
         crew_3 = Crew(agents=[comparator_agent], tasks=[comparator_task], process=Process.sequential)
         comparator_output = crew_3.kickoff()
-        time.sleep(5)
+        time.sleep(3)
         
         comparison_results = safe_parse_json(extract_json_block(comparator_output))
+        
+        # Fallback if comparator agent output is invalid or empty JSON
+        if not comparison_results or not comparison_results.get("comparisons"):
+            logger.info("Comparison agent output invalid/empty. Computing comparisons programmatically...")
+            comp_list = []
+            for p in products:
+                if p["loan_id"] in eligibility_results.get("eligible_products", []):
+                    # Rate based on credit score
+                    interest_rate = p["interest_rate_min"]
+                    if validated_profile["credit_score"] < 750:
+                        interest_rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                    if validated_profile["credit_score"] < 650:
+                        interest_rate = p["interest_rate_max"]
+                        
+                    tenure_months = min(validated_profile["preferred_tenure"] * 12, p["max_tenure_months"])
+                    
+                    from utils.emi_calculator import calculate_emi, calculate_total_interest
+                    new_emi = calculate_emi(validated_profile["desired_amount"], interest_rate, tenure_months)
+                    total_interest = calculate_total_interest(validated_profile["desired_amount"], new_emi, tenure_months)
+                    total_payable = validated_profile["desired_amount"] + total_interest
+                    processing_fee = validated_profile["desired_amount"] * (p["processing_fee_percent"] / 100)
+                    ear = ((1 + interest_rate / 1200) ** 12 - 1) * 100
+                    
+                    new_dti = ((validated_profile["existing_emis"] + new_emi) / validated_profile["monthly_income"]) * 100
+                    aff_score = max(0, min(100, int(100 - (new_dti * 1.5))))
+                    
+                    comp_list.append({
+                        "loan_id": p["loan_id"],
+                        "bank_name": p["bank_name"],
+                        "interest_rate_used": round(interest_rate, 3),
+                        "tenure_months": int(tenure_months),
+                        "monthly_emi": round(new_emi, 2),
+                        "total_interest": round(total_interest, 2),
+                        "total_amount_payable": round(total_payable, 2),
+                        "processing_fee_amount": round(processing_fee, 2),
+                        "effective_annual_rate": round(ear, 2),
+                        "affordability_score": int(aff_score)
+                    })
+            comp_list = sorted(comp_list, key=lambda x: x["affordability_score"], reverse=True)
+            
+            lowest_emi_rank = [x["loan_id"] for x in sorted(comp_list, key=lambda x: x["monthly_emi"])]
+            lowest_total_cost_rank = [x["loan_id"] for x in sorted(comp_list, key=lambda x: x["total_amount_payable"])]
+            best_rate_rank = [x["loan_id"] for x in sorted(comp_list, key=lambda x: x["interest_rate_used"])]
+            
+            comparison_results = {
+                "comparisons": comp_list,
+                "rankings": {
+                    "lowest_emi": lowest_emi_rank,
+                    "lowest_total_cost": lowest_total_cost_rank,
+                    "best_rate": best_rate_rank
+                }
+            }
+            
         log_agent_action("LoanComparatorAgent", "Loan Cost Comparison", "SUCCESS", "Comparison calculations complete.")
         save_agent_log(customer_id, "LoanComparatorAgent", "Loan Cost Comparison", "SUCCESS", "Comparison and rankings completed.")
+
+        # Save comparison and eligibility to database immediately in case recommendation fails
+        try:
+            save_recommendations(
+                customer_id=customer_id,
+                recommendation_data={"recommendations": []},
+                comparison_data=comparison_results,
+                eligibility_data=eligibility_results
+            )
+        except Exception as db_save_err:
+            logger.error(f"Failed to save comparison data early: {str(db_save_err)}")
 
         # -------------------------------------------------------------
         # STEP 4: RECOMMENDATION ENGINE (Agent 4)
@@ -304,10 +368,47 @@ def run_loan_advisory_pipeline(raw_profile, customer_id=None, pdf_path=None):
         log_agent_action("RecommendationEngineAgent", "Advisory Recommendations", "STARTED")
         
         comparisons_list = comparison_results.get("comparisons", [])
-        recommendation_results = generate_recommendation_details(validated_profile, comparisons_list)
         
-        log_agent_action("RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Top recommendations generated.")
-        save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated.")
+        # Try running recommendation engine, with robust fallback
+        try:
+            recommendation_results = generate_recommendation_details(validated_profile, comparisons_list)
+            if not recommendation_results or not recommendation_results.get("recommendations"):
+                raise ValueError("Recommendation results list is empty.")
+            log_agent_action("RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Top recommendations generated.")
+            save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated.")
+        except Exception as rec_err:
+            logger.error(f"Recommendation engine failed: {str(rec_err)}. Using programmatic fallback...")
+            log_agent_action("RecommendationEngineAgent", "Advisory Recommendations", "FAILED", f"Error: {str(rec_err)}")
+            
+            # Programmatic fallback using comparisons list directly
+            fallback_recs = []
+            for idx, comp in enumerate(comparisons_list[:3], 1):
+                loan_id = comp.get("loan_id")
+                bank_name = comp.get("bank_name")
+                loan_type = comp.get("loan_type", validated_profile.get("loan_purpose", "Personal") + " Loan")
+                rate = comp.get("interest_rate_used")
+                emi = comp.get("monthly_emi")
+                score = comp.get("affordability_score")
+                
+                fallback_recs.append({
+                    "rank": idx,
+                    "loan_id": loan_id,
+                    "bank_name": bank_name,
+                    "loan_type": loan_type,
+                    "suitability_score": int(score or 80),
+                    "why_suits": f"This loan is recommended because of its competitive interest rate of {rate}% and manageable EMI of INR {emi:,.2f}.",
+                    "advantages": [
+                        f"Competitive interest rate of {rate}%",
+                        f"Manageable EMI of INR {emi:,.2f} per month"
+                    ],
+                    "risks": [
+                        "Prepayment penalties may apply if paid early"
+                    ],
+                    "suggested_tenure": f"{comp.get('tenure_months')} months",
+                    "negotiation_tip": f"Request processing fee waiver based on credit score of {validated_profile.get('credit_score')}."
+                })
+            recommendation_results = {"recommendations": fallback_recs}
+            save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated via fallback.")
 
         # -------------------------------------------------------------
         # STEP 5: PDF REPORT GENERATION (Agent 5)

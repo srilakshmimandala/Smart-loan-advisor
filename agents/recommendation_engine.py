@@ -62,27 +62,19 @@ def get_recommendation_engine_task(agent, customer_profile_str, comparison_table
             
             Based on these details:
             - Select the Top 3 Loan Products (or all available if there are fewer than 3) that are most suitable for this customer.
-            - Take into account their desired loan amount, purpose, monthly income, existing debt commitments, and credit score.
-            - Assign a suitability_score (0 to 100) for each recommendation reflecting how well it fits.
-            - For each recommended product, provide:
-              1. why_suits: Why this loan matches this customer specifically (e.g. alignment with their goal, DTI comfort, or approval speed).
-              2. advantages: Key advantages or special features of this product for their situation.
-              3. risks: Potential risks, prepayment penalties, rate hike risks, or things to watch out for.
-              4. suggested_tenure: Recommended tenure to balance monthly payment size against overall interest cost.
-              5. negotiation_tip: A clear, actionable tip they can use to negotiate better terms based on their profile (e.g. interest rate discount based on credit score, fee waiver, etc.).
+            - Keep descriptions extremely concise to fit within strict token limits.
             
-            Output a JSON-parsable structure with the key:
-            - recommendations: a list of objects, sorted by rank (1, 2, 3), containing:
-              * rank: integer (1, 2, 3)
-              * loan_id: string
-              * bank_name: string
-              * loan_type: string
-              * suitability_score: integer (0-100)
-              * why_suits: string
-              * advantages: list of strings (at least 2 advantages)
-              * risks: list of strings (at least 1 risk or caution note)
-              * suggested_tenure: string
-              * negotiation_tip: string
+            Output a JSON-parsable structure with the key 'recommendations' containing:
+            - rank: integer (1, 2, 3)
+            - loan_id: string
+            - bank_name: string
+            - loan_type: string
+            - suitability_score: integer (0-100)
+            - why_suits: string (strictly under 15 words)
+            - advantages: list of 2 strings (strictly under 10 words each)
+            - risks: list of 1 string (strictly under 10 words)
+            - suggested_tenure: string (concise, e.g. "3 years")
+            - negotiation_tip: string (strictly under 15 words)
             
             DO NOT include any Markdown formatting like ```json or similar in your final response. Return ONLY the raw JSON string.
             """,

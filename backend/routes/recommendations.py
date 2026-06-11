@@ -33,10 +33,43 @@ def run_pipeline():
         
         if result.get("status") == "success":
             try:
-                # Ensure all parts are parsed and assembled properly
                 recs = result.get("recommendations", {})
                 comps = result.get("comparisons", {})
                 elig = result.get("eligibility", {})
+                
+                # Check if recommendations list is empty
+                rec_list = recs.get("recommendations", []) if isinstance(recs, dict) else []
+                if not rec_list:
+                    logger.info("Recommendations empty in run-pipeline. Falling back to comparison top 3...")
+                    comp_list = comps.get("comparisons", []) if isinstance(comps, dict) else []
+                    sorted_comps = sorted(comp_list, key=lambda x: x.get("affordability_score", 0), reverse=True)
+                    fallback_recs = []
+                    for idx, comp in enumerate(sorted_comps[:3], 1):
+                        loan_id = comp.get("loan_id")
+                        bank_name = comp.get("bank_name")
+                        loan_type = comp.get("loan_type", profile.get("loan_purpose", "Personal") + " Loan")
+                        rate = comp.get("interest_rate_used")
+                        emi = comp.get("monthly_emi")
+                        score = comp.get("affordability_score")
+                        
+                        fallback_recs.append({
+                            "rank": idx,
+                            "loan_id": loan_id,
+                            "bank_name": bank_name,
+                            "loan_type": loan_type,
+                            "suitability_score": int(score or 80),
+                            "why_suits": f"Recommended based on highest affordability score of {score} and rate of {rate}%.",
+                            "advantages": [
+                                f"Competitive interest rate of {rate}%",
+                                f"Monthly EMI of INR {emi:,.2f}"
+                            ],
+                            "risks": [
+                                "Prepayment penalties may apply."
+                            ],
+                            "suggested_tenure": f"{comp.get('tenure_months')} months",
+                            "negotiation_tip": f"Request processing fee waiver based on credit score of {profile.get('credit_score')}."
+                        })
+                    recs = {"recommendations": fallback_recs}
                 
                 return jsonify({
                     "status": "success",
@@ -104,10 +137,56 @@ def get_customer_recommendations(customer_id):
                 )
                 data = get_recommendations(customer_id)
                 
+        # If recommendations list is still empty, fall back to using top 3 from comparison data sorted by affordability score
+        rec_data = data.get("recommendation_data") if data else {}
+        rec_list = rec_data.get("recommendations", []) if isinstance(rec_data, dict) else []
+        
+        if not rec_list and data:
+            logger.info(f"Recommendations list empty for customer {customer_id} on GET. Falling back to comparison top 3...")
+            comp_data = data.get("comparison_data") or {}
+            comp_list = comp_data.get("comparisons", []) if isinstance(comp_data, dict) else []
+            if comp_list:
+                sorted_comps = sorted(comp_list, key=lambda x: x.get("affordability_score", 0), reverse=True)
+                fallback_recs = []
+                for idx, comp in enumerate(sorted_comps[:3], 1):
+                    loan_id = comp.get("loan_id")
+                    bank_name = comp.get("bank_name")
+                    loan_type = comp.get("loan_type", customer.get("loan_purpose", "Personal") + " Loan")
+                    rate = comp.get("interest_rate_used")
+                    emi = comp.get("monthly_emi")
+                    score = comp.get("affordability_score")
+                    
+                    fallback_recs.append({
+                        "rank": idx,
+                        "loan_id": loan_id,
+                        "bank_name": bank_name,
+                        "loan_type": loan_type,
+                        "suitability_score": int(score or 80),
+                        "why_suits": f"Recommended based on highest affordability score of {score} and rate of {rate}%.",
+                        "advantages": [
+                            f"Competitive interest rate of {rate}%",
+                            f"Monthly EMI of INR {emi:,.2f}"
+                        ],
+                        "risks": [
+                            "Prepayment penalties may apply."
+                        ],
+                        "suggested_tenure": f"{comp.get('tenure_months')} months",
+                        "negotiation_tip": f"Request processing fee waiver based on credit score of {customer.get('credit_score')}."
+                    })
+                data["recommendation_data"] = {"recommendations": fallback_recs}
+                # Save it back to DB so it persists
+                from database import save_recommendations
+                save_recommendations(
+                    customer_id=customer_id,
+                    recommendation_data=data["recommendation_data"],
+                    comparison_data=comp_data,
+                    eligibility_data=data.get("eligibility_data") or {}
+                )
+                
         return jsonify({
             "status": "success", 
-            "recommendations": data["recommendation_data"],
-            "eligibility": data["eligibility_data"]
+            "recommendations": data["recommendation_data"] if data else {"recommendations": []},
+            "eligibility": data["eligibility_data"] if data else {}
         }), 200
     except Exception as e:
         logger.error(f"Error fetching recommendations: {str(e)}")
