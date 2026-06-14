@@ -931,6 +931,10 @@ function initInteractiveCalculator(profile) {
   const calcEmi = document.getElementById("calcEmi");
   const calcDti = document.getElementById("calcDti");
   
+  // Defensive numeric coercion for profile fields
+  const income = Number(String(profile.monthly_income).replace(/[₹$,]/g, '')) || 0;
+  const existingEmis = Number(String(profile.existing_emis).replace(/[₹$,]/g, '')) || 0;
+  
   function updateCalculatorValues() {
     const amount = parseFloat(sAmount.value);
     const rate = parseFloat(sRate.value);
@@ -951,7 +955,10 @@ function initInteractiveCalculator(profile) {
       emi = amount * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
     }
     
-    const totalDti = ((profile.existing_emis + emi) / profile.monthly_income) * 100;
+    // Debug logging as requested
+    console.log("[DTI Calculation] exact income value:", income, "typeof:", typeof income, "existingEmis:", existingEmis, "newEmi:", emi);
+    
+    const totalDti = income > 0 ? ((existingEmis + emi) / income) * 100 : 0;
     
     // Render
     calcEmi.innerText = "₹" + Math.round(emi).toLocaleString('en-IN');
@@ -966,8 +973,17 @@ function initInteractiveCalculator(profile) {
   }
   
   // Set default starting values matching user's intake preference
-  sAmount.value = profile.desired_amount;
-  sTenure.value = profile.preferred_tenure;
+  const cleanDesiredAmount = Number(String(profile.desired_amount).replace(/[₹$,]/g, '')) || 500000;
+  const cleanTenure = Number(profile.preferred_tenure) || 5;
+
+  if (cleanDesiredAmount < parseFloat(sAmount.min)) {
+    sAmount.min = Math.floor(cleanDesiredAmount / 100000) * 100000;
+  }
+  if (cleanDesiredAmount > parseFloat(sAmount.max)) {
+    sAmount.max = Math.ceil(cleanDesiredAmount / 100000) * 100000;
+  }
+  sAmount.value = cleanDesiredAmount;
+  sTenure.value = cleanTenure;
   
   sAmount.addEventListener("input", updateCalculatorValues);
   sRate.addEventListener("input", updateCalculatorValues);
@@ -995,9 +1011,27 @@ function initWhatIfSimulator(profile, customerId) {
   }
   
   // Bind defaults
-  simIncome.value = profile.monthly_income;
-  simAmount.value = profile.desired_amount;
-  simTenure.value = profile.preferred_tenure;
+  const cleanIncome = Number(String(profile.monthly_income).replace(/[₹$,]/g, '')) || 15000;
+  const cleanDesiredAmount = Number(String(profile.desired_amount).replace(/[₹$,]/g, '')) || 500000;
+  const cleanTenure = Number(profile.preferred_tenure) || 5;
+
+  if (cleanIncome < parseFloat(simIncome.min)) {
+    simIncome.min = Math.floor(cleanIncome / 1000) * 1000;
+  }
+  if (cleanIncome > parseFloat(simIncome.max)) {
+    simIncome.max = Math.ceil(cleanIncome / 1000) * 1000;
+  }
+  simIncome.value = cleanIncome;
+
+  if (cleanDesiredAmount < parseFloat(simAmount.min)) {
+    simAmount.min = Math.floor(cleanDesiredAmount / 100000) * 100000;
+  }
+  if (cleanDesiredAmount > parseFloat(simAmount.max)) {
+    simAmount.max = Math.ceil(cleanDesiredAmount / 100000) * 100000;
+  }
+  simAmount.value = cleanDesiredAmount;
+
+  simTenure.value = cleanTenure;
   updateSliders();
   
   simIncome.addEventListener("input", updateSliders);
