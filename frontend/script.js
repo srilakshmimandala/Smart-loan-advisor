@@ -5,6 +5,28 @@ const BASE_URL = '';
 let emiChartInstance = null;
 let costBreakdownChartInstance = null;
 
+// Parse amount written in natural language (e.g. "12 thousand", "5 lakh", "50k", "1 crore")
+function parseAmount(text) {
+  if (typeof text !== 'string') return NaN;
+  let cleanText = text.replace(/[₹$,]/g, '').trim().toLowerCase();
+  
+  const match = cleanText.match(/^([0-9]+(?:\.[0-9]+)?)\s*(thousand|k|lakhs?|lacs?|crores?|cr)$/);
+  if (match) {
+    const value = parseFloat(match[1]);
+    const unit = match[2];
+    
+    if (unit === 'thousand' || unit === 'k') {
+      return value * 1000;
+    } else if (unit === 'lakh' || unit === 'lacs' || unit === 'lakhs' || unit === 'lac') {
+      return value * 100000;
+    } else if (unit === 'crore' || unit === 'cr' || unit === 'crores') {
+      return value * 10000000;
+    }
+  }
+  
+  return parseFloat(cleanText);
+}
+
 // ==========================================
 // 1. CHAT INTAKE FLOW (chat.html)
 // ==========================================
@@ -262,7 +284,7 @@ function handleUserMessage() {
       askNextQuestion();
       break;
     case 4:
-      const income = parseFloat(val.replace(/,/g, ''));
+      const income = parseAmount(val);
       if (isNaN(income) || income <= 0) {
         appendBotMessage("Please enter a valid monthly income number.");
         return;
@@ -272,7 +294,7 @@ function handleUserMessage() {
       askNextQuestion();
       break;
     case 5:
-      const emis = parseFloat(val.replace(/,/g, ''));
+      const emis = parseAmount(val);
       if (isNaN(emis) || emis < 0) {
         appendBotMessage("Please enter a valid EMI amount (or 0).");
         return;
@@ -282,7 +304,7 @@ function handleUserMessage() {
       askNextQuestion();
       break;
     case 8:
-      const amount = parseFloat(val.replace(/,/g, ''));
+      const amount = parseAmount(val);
       if (isNaN(amount) || amount <= 0) {
         appendBotMessage("Please enter a valid desired amount.");
         return;

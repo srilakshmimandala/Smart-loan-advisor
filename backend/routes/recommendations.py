@@ -28,6 +28,8 @@ def generate_direct_loan_advisory(profile, customer_id):
         
         eligible_ids = []
         eligibility_details = {}
+        applied_amounts = {p["loan_id"]: profile["desired_amount"] for p in products}
+        fallback_notes = {}
         
         for p in products:
             loan_type = p["loan_type"]
@@ -81,12 +83,104 @@ def generate_direct_loan_advisory(profile, customer_id):
                 eligible = False
                 reasons.append(f"Desired amount INR {profile['desired_amount']} is outside product limit of INR {p['min_amount']} - INR {p['max_amount']}.")
                 
+            # New EMI DTI check
+            if eligible:
+                if profile["credit_score"] >= 750:
+                    rate = p["interest_rate_min"]
+                elif profile["credit_score"] >= 650:
+                    rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                else:
+                    rate = p["interest_rate_max"]
+                    
+                tenure_months = min(profile["preferred_tenure"] * 12, p["max_tenure_months"])
+                new_emi = calculate_emi(profile["desired_amount"], rate, tenure_months)
+                new_dti = ((profile["existing_emis"] + new_emi) / profile["monthly_income"] * 100) if profile["monthly_income"] > 0 else 100.0
+                
+                if new_dti > 50.0:
+                    eligible = False
+                    reasons.append(f"DTI ratio with new EMI ({new_dti:.1f}%) exceeds 50.0% limit.")
+                
             eligibility_details[p["loan_id"]] = {
                 "eligible": eligible,
                 "reasons": reasons
             }
             if eligible:
                 eligible_ids.append(p["loan_id"])
+
+        # Check if any products of the requested loan type are eligible
+        categories_mapping = {
+            "Home Loan": ["Home Loan"],
+            "Personal Loan": ["Personal Loan"],
+            "Vehicle Loan": ["Vehicle Loan", "Car Loan"],
+            "Car Loan": ["Vehicle Loan", "Car Loan"],
+            "Education Loan": ["Education Loan"],
+            "Gold Loan": ["Gold Loan"],
+            "Business Loan": ["Business Loan"]
+        }
+        
+        requested_purpose = profile.get("loan_purpose")
+        mapped_types = categories_mapping.get(requested_purpose, [requested_purpose])
+        
+        has_eligible_product_of_type = any(
+            pid in eligible_ids
+            for pid in eligible_ids
+            for p in products
+            if p["loan_id"] == pid and p["loan_type"] in mapped_types
+        )
+        
+        if not has_eligible_product_of_type:
+            # We want to recommend products of this type using maximum eligible amount
+            for p in products:
+                if p["loan_type"] not in mapped_types:
+                    continue
+                
+                # Check basic criteria (age, credit score, income, employment)
+                rule = rules.get(p["loan_type"], {})
+                age_ok = rule.get("min_age", 18) <= profile["age"] <= rule.get("max_age", 75)
+                credit_ok = profile["credit_score"] >= p["min_credit_score"]
+                income_ok = profile["monthly_income"] >= p["min_monthly_income"]
+                
+                emp_eligible = p["employment_types_eligible"]
+                if isinstance(emp_eligible, str):
+                    try:
+                        emp_eligible = json.loads(emp_eligible)
+                    except Exception:
+                        emp_eligible = [x.strip() for x in emp_eligible.split(",")]
+                emp_ok = profile["employment_type"] in emp_eligible
+                
+                if age_ok and credit_ok and income_ok and emp_ok:
+                    # Calculate max eligible amount based on 50% DTI
+                    max_new_emi = (0.50 * profile["monthly_income"]) - profile["existing_emis"]
+                    if max_new_emi > 0:
+                        # Determine interest rate
+                        if profile["credit_score"] >= 750:
+                            rate = p["interest_rate_min"]
+                        elif profile["credit_score"] >= 650:
+                            rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                        else:
+                            rate = p["interest_rate_max"]
+                            
+                        tenure_months = min(profile["preferred_tenure"] * 12, p["max_tenure_months"])
+                        
+                        r_monthly = (rate / 12) / 100
+                        if r_monthly == 0:
+                            max_supported = max_new_emi * tenure_months
+                        else:
+                            factor = (1 + r_monthly) ** tenure_months
+                            max_supported = max_new_emi * (factor - 1) / (r_monthly * factor)
+                            
+                        max_eligible_amount = min(max_supported, p["max_amount"])
+                        
+                        if max_eligible_amount >= p["min_amount"]:
+                            # The customer is eligible for this product at max_eligible_amount!
+                            applied_amounts[p["loan_id"]] = max_eligible_amount
+                            eligible_ids.append(p["loan_id"])
+                            # Clear old rejection reasons and mark as eligible
+                            eligibility_details[p["loan_id"]] = {
+                                "eligible": True,
+                                "reasons": []
+                            }
+                            fallback_notes[p["loan_id"]] = f"Recommendation based on your maximum eligible amount of ₹{max_eligible_amount:,.2f} instead of requested ₹{profile['desired_amount']:,.2f}."
 
         dti_ratio = (profile["existing_emis"] / profile["monthly_income"]) * 100 if profile["monthly_income"] > 0 else 100.0
         is_high_risk = dti_ratio > 50.0 or profile["credit_score"] < 600
@@ -185,6 +279,51 @@ def generate_direct_loan_advisory(profile, customer_id):
                 elif prod_status == "Conditionally Eligible" and best_status != "Eligible":
                     best_status = "Conditionally Eligible"
                     
+            if best_status == "Not Eligible" and profile["monthly_income"] > 0:
+                max_amounts_for_cat = []
+                for p in cat_products:
+                    # check basic criteria (age, credit score, income, employment)
+                    rule = rules.get(p["loan_type"], {})
+                    age_ok = rule.get("min_age", 18) <= profile["age"] <= rule.get("max_age", 75)
+                    credit_ok = profile["credit_score"] >= p["min_credit_score"]
+                    income_ok = profile["monthly_income"] >= p["min_monthly_income"]
+                    
+                    emp_eligible = p["employment_types_eligible"]
+                    if isinstance(emp_eligible, str):
+                        try:
+                            emp_eligible = json.loads(emp_eligible)
+                        except Exception:
+                            emp_eligible = [x.strip() for x in emp_eligible.split(",")]
+                    emp_ok = profile["employment_type"] in emp_eligible
+                    
+                    if age_ok and credit_ok and income_ok and emp_ok:
+                        max_new_emi = (0.50 * profile["monthly_income"]) - profile["existing_emis"]
+                        if max_new_emi > 0:
+                            if profile["credit_score"] >= 750:
+                                rate = p["interest_rate_min"]
+                            elif profile["credit_score"] >= 650:
+                                rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                            else:
+                                rate = p["interest_rate_max"]
+                                
+                            tenure_months = min(profile["preferred_tenure"] * 12, p["max_tenure_months"])
+                            
+                            r_monthly = (rate / 12) / 100
+                            if r_monthly == 0:
+                                max_supported = max_new_emi * tenure_months
+                            else:
+                                factor = (1 + r_monthly) ** tenure_months
+                                max_supported = max_new_emi * (factor - 1) / (r_monthly * factor)
+                                
+                            max_eligible = min(max_supported, p["max_amount"])
+                            if max_eligible >= p["min_amount"]:
+                                max_amounts_for_cat.append(max_eligible)
+                                
+                if max_amounts_for_cat:
+                    overall_max_cat = max(max_amounts_for_cat)
+                    best_status = "Conditionally Eligible"
+                    reasons = [f"You're eligible for up to ₹{overall_max_cat:,.0f} for {category_name} based on your income."]
+                    
             loan_type_eligibility[category_name] = {
                 "status": best_status,
                 "reason": "; ".join(reasons[:2])
@@ -217,10 +356,11 @@ def generate_direct_loan_advisory(profile, customer_id):
             tenure_months = min(profile["preferred_tenure"] * 12, p["max_tenure_months"])
             
             # Calculations
-            new_emi = calculate_emi(profile["desired_amount"], interest_rate, tenure_months)
-            total_interest = calculate_total_interest(profile["desired_amount"], new_emi, tenure_months)
-            total_payable = profile["desired_amount"] + total_interest
-            processing_fee = profile["desired_amount"] * (p["processing_fee_percent"] / 100)
+            principal_amount = applied_amounts[p["loan_id"]]
+            new_emi = calculate_emi(principal_amount, interest_rate, tenure_months)
+            total_interest = calculate_total_interest(principal_amount, new_emi, tenure_months)
+            total_payable = principal_amount + total_interest
+            processing_fee = principal_amount * (p["processing_fee_percent"] / 100)
             ear = ((1 + interest_rate / 1200) ** 12 - 1) * 100
             
             # Affordability Score
@@ -290,6 +430,9 @@ def generate_direct_loan_advisory(profile, customer_id):
                 {"bank_name": item["bank_name"], "loan_type": item["loan_type"], "interest_rate": item["interest_rate_used"]},
                 profile
             )
+            
+            if item["loan_id"] in fallback_notes:
+                explanation = f"{fallback_notes[item['loan_id']]} {explanation}"
             
             # build advantages/risks
             advantages = [
