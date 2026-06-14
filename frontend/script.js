@@ -16,16 +16,19 @@ const loanEmojis = {
   "Business Loan": "💼"
 };
 
-function getLoanEmoji(type) {
+function getLoanEmoji(type, withSpan = true) {
   if (!type) return "";
   const t = type.toLowerCase();
-  if (t.includes("home")) return "🏠";
-  if (t.includes("personal")) return "💰";
-  if (t.includes("car") || t.includes("vehicle") || t.includes("auto")) return "🚗";
-  if (t.includes("education")) return "🎓";
-  if (t.includes("gold")) return "💍";
-  if (t.includes("business")) return "💼";
-  return "";
+  let emoji = "";
+  if (t.includes("home")) emoji = "🏠";
+  else if (t.includes("personal")) emoji = "💰";
+  else if (t.includes("car") || t.includes("vehicle") || t.includes("auto")) emoji = "🚗";
+  else if (t.includes("education")) emoji = "🎓";
+  else if (t.includes("gold")) emoji = "💍";
+  else if (t.includes("business")) emoji = "💼";
+  
+  if (!emoji) return "";
+  return withSpan ? `<span class="loan-emoji">${emoji}</span>` : emoji;
 }
 
 // Parse amount written in natural language (e.g. "12 thousand", "5 lakh", "50k", "1 crore")
@@ -135,18 +138,18 @@ function appendBotMessage(text) {
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble bot";
   
-  // Replace loan type names with loan type + emoji
+  // Replace loan type names with emoji + loan type
   let decoratedText = text;
   const terms = ["Home Loan", "Personal Loan", "Car Loan", "Vehicle Loan", "Education Loan", "Gold Loan", "Business Loan"];
   terms.forEach(term => {
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
     decoratedText = decoratedText.replace(regex, (matched) => {
-      const emoji = getLoanEmoji(term);
-      return emoji ? `${matched} ${emoji}` : matched;
+      const emojiSpan = getLoanEmoji(term, true);
+      return emojiSpan ? `${emojiSpan}${matched}` : matched;
     });
   });
   
-  bubble.innerText = decoratedText;
+  bubble.innerHTML = decoratedText;
   chatBox.appendChild(bubble);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -155,7 +158,7 @@ function appendUserMessage(text) {
   const chatBox = document.getElementById("chatBox");
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble user";
-  bubble.innerText = text;
+  bubble.innerHTML = text;
   chatBox.appendChild(bubble);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -168,7 +171,7 @@ function showQuickReplies(options, onSelect) {
   options.forEach(opt => {
     const btn = document.createElement("button");
     btn.className = "reply-btn";
-    btn.innerText = opt;
+    btn.innerHTML = opt;
     btn.onclick = () => {
       container.style.display = "none";
       onSelect(opt);
@@ -231,10 +234,15 @@ function askNextQuestion() {
       break;
     case 7:
       appendBotMessage("What type of loan are you looking for?");
-      showQuickReplies(["Home Loan 🏠", "Personal Loan 💰", "Car Loan 🚗", "Education Loan 🎓"], (val) => {
+      showQuickReplies([
+        '<span class="loan-emoji">🏠</span>Home Loan',
+        '<span class="loan-emoji">💰</span>Personal Loan',
+        '<span class="loan-emoji">🚗</span>Car Loan',
+        '<span class="loan-emoji">🎓</span>Education Loan'
+      ], (val) => {
         appendUserMessage(val);
-        // Strip the emoji before saving
-        chatState.data.loan_purpose = val.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
+        // Strip the HTML and emoji before saving
+        chatState.data.loan_purpose = val.replace(/<[^>]*>/g, '').replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
         chatState.step++;
         askNextQuestion();
       });
@@ -540,10 +548,10 @@ function populateEligibility(eligibilityData) {
   grid.innerHTML = '';
   
   const displayCategories = [
-    { label: "Home Loan 🏠", dbKeys: ["Home Loan", "Home"] },
-    { label: "Personal Loan 💰", dbKeys: ["Personal Loan", "Personal"] },
-    { label: "Auto Loan 🚗", dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
-    { label: "Education Loan 🎓", dbKeys: ["Education Loan", "Education"] }
+    { label: '<span class="loan-emoji">🏠</span>Home Loan', dbKeys: ["Home Loan", "Home"] },
+    { label: '<span class="loan-emoji">💰</span>Personal Loan', dbKeys: ["Personal Loan", "Personal"] },
+    { label: '<span class="loan-emoji">🚗</span>Auto Loan', dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
+    { label: '<span class="loan-emoji">🎓</span>Education Loan', dbKeys: ["Education Loan", "Education"] }
   ];
   
   const typeEligibility = eligibilityData.loan_type_eligibility || {};
@@ -617,8 +625,8 @@ function populateRecommendations(recsObj, comparisonsList, customerId) {
     const advantagesList = (rec.advantages || []).map(adv => `<li>${adv}</li>`).join("");
     const risksList = (rec.risks || []).map(risk => `<li>${risk}</li>`).join("");
     
-    const emoji = getLoanEmoji(rec.loan_type);
-    const typeLabel = emoji ? `${rec.loan_type} ${emoji}` : rec.loan_type;
+    const emojiSpan = getLoanEmoji(rec.loan_type, true);
+    const typeLabel = emojiSpan ? `${emojiSpan}${rec.loan_type}` : rec.loan_type;
 
     card.innerHTML = `
       <div class="rec-card-header">
@@ -801,8 +809,8 @@ async function loadKanbanBoard(customerId) {
         btnLabel = 'Re-apply';
       }
       
-      const emoji = getLoanEmoji(app.loan_type);
-      const typeLabel = emoji ? `${app.loan_type} ${emoji}` : app.loan_type;
+      const emojiSpan = getLoanEmoji(app.loan_type, true);
+      const typeLabel = emojiSpan ? `${emojiSpan}${app.loan_type}` : app.loan_type;
 
       card.innerHTML = `
         <h5>${app.bank_name}</h5>
@@ -1117,10 +1125,10 @@ function initWhatIfSimulator(profile, customerId) {
       if (payload.eligibility_summary) {
         const summaries = payload.eligibility_summary;
         const mapping = {
-          "Home Loan": "Home Loan 🏠",
-          "Personal Loan": "Personal Loan 💰",
-          "Vehicle Loan": "Auto Loan 🚗",
-          "Education Loan": "Education Loan 🎓"
+          "Home Loan": '<span class="loan-emoji">🏠</span>Home Loan',
+          "Personal Loan": '<span class="loan-emoji">💰</span>Personal Loan',
+          "Vehicle Loan": '<span class="loan-emoji">🚗</span>Auto Loan',
+          "Education Loan": '<span class="loan-emoji">🎓</span>Education Loan'
         };
         const grid = document.getElementById("eligibilityGrid");
         grid.innerHTML = '';

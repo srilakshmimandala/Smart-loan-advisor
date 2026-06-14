@@ -36,7 +36,7 @@
 }
 
 body {
-  background: linear-gradient(-45deg, #04040f, #0b0b20, #0c001a, #00151a);
+  background: linear-gradient(-45deg, #03001e, #160533, #051026, #002930, #2b061e);
   background-size: 400% 400%;
   animation: gradientBG 15s ease infinite;
   color: var(--text-primary);
@@ -60,6 +60,20 @@ body::before {
   background-size: 40px 40px;
   pointer-events: none;
   z-index: -1;
+}
+
+.loan-emoji {
+  font-size: 1.6rem;
+  margin-right: 12px;
+  vertical-align: middle;
+  display: inline-block;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 242, 254, 0.3));
+  transition: transform 0.2s ease;
+}
+
+.loan-emoji:hover {
+  transform: scale(1.2);
 }
 
 h1, h2, h3, h4, h5, h6 {
