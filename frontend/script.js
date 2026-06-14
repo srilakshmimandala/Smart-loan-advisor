@@ -508,15 +508,15 @@ function populateEligibility(eligibilityData) {
     if (details) {
       let match = "";
       if (typeof details === "string") {
-        match = details;
+        match = details.toLowerCase();
       } else if (typeof details === "object" && details !== null) {
-        match = details.status || "";
+        match = (details.status || "").toLowerCase();
       }
       
-      if (match === "Eligible") {
+      if (match === "eligible") {
         status = "Eligible";
         statusClass = "eligible";
-      } else if (match && typeof match === "string" && match.includes("Conditional")) {
+      } else if (match && match.includes("conditional")) {
         status = "Conditional";
         statusClass = "conditional";
       }
@@ -1032,8 +1032,9 @@ function initWhatIfSimulator(profile, customerId) {
           card.className = "eligibility-card glass-panel";
           const item = summaries[k] || { status: "Not Eligible" };
           let badgeClass = "rejected";
-          if (item.status === "Eligible") badgeClass = "eligible";
-          if (item.status.includes("Conditional")) badgeClass = "conditional";
+          const itemStatus = (item.status || "").toLowerCase();
+          if (itemStatus === "eligible") badgeClass = "eligible";
+          if (itemStatus.includes("conditional")) badgeClass = "conditional";
           
           card.innerHTML = `
             <h4>${mapping[k]}</h4>

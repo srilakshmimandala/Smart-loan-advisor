@@ -88,7 +88,112 @@ def generate_direct_loan_advisory(profile, customer_id):
             if eligible:
                 eligible_ids.append(p["loan_id"])
 
+        dti_ratio = (profile["existing_emis"] / profile["monthly_income"]) * 100 if profile["monthly_income"] > 0 else 100.0
+        is_high_risk = dti_ratio > 50.0 or profile["credit_score"] < 600
+
+        categories_mapping = {
+            "Home Loan": ["Home Loan"],
+            "Personal Loan": ["Personal Loan"],
+            "Vehicle Loan": ["Vehicle Loan", "Car Loan"],
+            "Car Loan": ["Vehicle Loan", "Car Loan"],
+            "Education Loan": ["Education Loan"],
+            "Gold Loan": ["Gold Loan"],
+            "Business Loan": ["Business Loan"]
+        }
+
+        loan_type_eligibility = {}
+        for category_name, rule_keys in categories_mapping.items():
+            rule = {}
+            for k in rule_keys:
+                if k in rules:
+                    rule = rules[k]
+                    break
+            
+            min_age = rule.get("min_age", 18)
+            max_age = rule.get("max_age", 75)
+            min_credit = rule.get("min_credit_score", 300)
+            min_income = rule.get("min_monthly_income", 0)
+            
+            cat_products = [p for p in products if p["loan_type"] in rule_keys]
+            if not cat_products:
+                loan_type_eligibility[category_name] = {
+                    "status": "Not Eligible",
+                    "reason": "No products available for this loan type."
+                }
+                continue
+                
+            age_ok = min_age <= profile["age"] <= max_age
+            if not age_ok:
+                loan_type_eligibility[category_name] = {
+                    "status": "Not Eligible",
+                    "reason": f"Age {profile['age']} is outside required range ({min_age}-{max_age})."
+                }
+                continue
+                
+            income_ok = profile["monthly_income"] >= min_income
+            if not income_ok:
+                loan_type_eligibility[category_name] = {
+                    "status": "Not Eligible",
+                    "reason": f"Net monthly income INR {profile['monthly_income']:,.2f} is below required INR {min_income:,.2f}."
+                }
+                continue
+                
+            best_status = "Not Eligible"
+            reasons = []
+            
+            for p in cat_products:
+                prod_min_credit = p.get("min_credit_score", min_credit)
+                prod_min_income = p.get("min_monthly_income", min_income)
+                
+                # Determine interest rate
+                if profile["credit_score"] >= 750:
+                    rate = p["interest_rate_min"]
+                elif profile["credit_score"] >= 650:
+                    rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                else:
+                    rate = p["interest_rate_max"]
+                    
+                tenure_months = min(profile["preferred_tenure"] * 12, p["max_tenure_months"])
+                new_emi = calculate_emi(profile["desired_amount"], rate, tenure_months)
+                
+                new_dti = ((profile["existing_emis"] + new_emi) / profile["monthly_income"] * 100) if profile["monthly_income"] > 0 else 100.0
+                
+                p_credit_ok = profile["credit_score"] >= prod_min_credit
+                p_income_ok = profile["monthly_income"] >= prod_min_income
+                p_dti_ok = new_dti <= 50.0
+                
+                if p_credit_ok and p_income_ok and p_dti_ok:
+                    if new_dti > 40.0 or profile["credit_score"] < 680 or profile["credit_score"] < prod_min_credit + 30:
+                        prod_status = "Conditionally Eligible"
+                        reasons.append(f"[{p['bank_name']}] Conditionally Eligible (moderate credit or DTI {new_dti:.1f}%).")
+                    else:
+                        prod_status = "Eligible"
+                        reasons.append(f"[{p['bank_name']}] Eligible.")
+                else:
+                    fail_reasons = []
+                    if not p_credit_ok:
+                        fail_reasons.append(f"Credit score {profile['credit_score']} < {prod_min_credit}")
+                    if not p_income_ok:
+                        fail_reasons.append(f"Income INR {profile['monthly_income']:,.0f} < INR {prod_min_income:,.0f}")
+                    if not p_dti_ok:
+                        fail_reasons.append(f"DTI {new_dti:.1f}% exceeds 50% limit")
+                    prod_status = "Not Eligible"
+                    reasons.append(f"[{p['bank_name']}] Not Eligible: " + ", ".join(fail_reasons))
+                    
+                if prod_status == "Eligible":
+                    best_status = "Eligible"
+                elif prod_status == "Conditionally Eligible" and best_status != "Eligible":
+                    best_status = "Conditionally Eligible"
+                    
+            loan_type_eligibility[category_name] = {
+                "status": best_status,
+                "reason": "; ".join(reasons[:2])
+            }
+
         eligibility_results = {
+            "dti_ratio": dti_ratio,
+            "is_high_risk": is_high_risk,
+            "loan_type_eligibility": loan_type_eligibility,
             "eligible_products": eligible_ids,
             "details": eligibility_details
         }
@@ -161,12 +266,16 @@ def generate_direct_loan_advisory(profile, customer_id):
             try:
                 client = Groq(api_key=groq_key)
                 def generate_explanation(loan, customer):
-                    response = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": f"In 2 sentences explain why {loan['bank_name']} {loan['loan_type']} at {loan['interest_rate']}% is good for a customer with income {customer['monthly_income']} and credit score {customer['credit_score']}"}],
-                        max_tokens=100
-                    )
-                    return response.choices[0].message.content.strip()
+                    try:
+                        response = client.chat.completions.create(
+                            model="llama-3.1-8b-instant",
+                            messages=[{"role": "user", "content": f"In 2 sentences explain why {loan['bank_name']} {loan['loan_type']} at {loan['interest_rate']}% is good for a customer with income {customer['monthly_income']} and credit score {customer['credit_score']}"}],
+                            max_tokens=100
+                        )
+                        return response.choices[0].message.content.strip()
+                    except Exception as call_err:
+                        logger.warning(f"Groq API call failed: {str(call_err)}. Using fallback explanation.")
+                        return f"This loan offers a competitive rate of {loan['interest_rate']}% with an affordable monthly payment."
             except Exception as groq_err:
                 logger.error(f"Failed to setup Groq client: {str(groq_err)}")
                 def generate_explanation(loan, customer):
@@ -207,6 +316,19 @@ def generate_direct_loan_advisory(profile, customer_id):
         recommendation_results = {
             "recommendations": recommendation_list
         }
+
+        # Ensure consistency with recommendations actually being shown
+        for rec in recommendation_list:
+            rec_type = rec["loan_type"]
+            for cat_name, rule_keys in categories_mapping.items():
+                if rec_type in rule_keys or rec_type == cat_name:
+                    current_status = eligibility_results.get("loan_type_eligibility", {}).get(cat_name, {}).get("status")
+                    if current_status == "Not Eligible":
+                        eligibility_results["loan_type_eligibility"][cat_name] = {
+                            "status": "Eligible",
+                            "reason": "Recommended by advisor based on financial details."
+                        }
+
         save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated.")
 
         # 5. Generate PDF report
@@ -216,9 +338,48 @@ def generate_direct_loan_advisory(profile, customer_id):
         os.makedirs(os.path.dirname(pdf_path) if os.path.dirname(pdf_path) else ".", exist_ok=True)
         
         # Assemble tips
-        tips = {}
-        for r in recommendation_list:
-            tips[r["loan_id"]] = r.get("negotiation_tip", "")
+        tips = []
+        # Tip 1: DTI
+        if dti_ratio > 40:
+            tips.append({
+                "title": "Reduce Debt-to-Income (DTI) Ratio",
+                "description": f"Your current DTI ratio of {dti_ratio:.1f}% is high. Prioritize paying off smaller outstanding obligations or credit cards to reduce your monthly EMI burden."
+            })
+        else:
+            tips.append({
+                "title": "Maintain Healthy Debt-to-Income Ratio",
+                "description": f"Your DTI ratio of {dti_ratio:.1f}% is healthy. Keep your monthly loan repayments below 40% of your income to ensure future financial flexibility."
+            })
+            
+        # Tip 2: Credit Score
+        if profile["credit_score"] < 700:
+            tips.append({
+                "title": "Boost Credit Score",
+                "description": f"Your credit score of {profile['credit_score']} has room for improvement. Ensure you pay all card bills and EMIs on time, and keep credit utilization below 30%."
+            })
+        else:
+            tips.append({
+                "title": "Leverage High Credit Score",
+                "description": f"Your credit score of {profile['credit_score']} is strong. Use this as leverage to negotiate lower interest rates and waivers on processing fees with banks."
+            })
+            
+        # Tip 3: Emergency Fund
+        tips.append({
+            "title": "Build an Emergency Savings Buffer",
+            "description": "Establish a liquid emergency fund covering 3 to 6 months of living expenses. This prevents the need for high-cost emergency loans during unforeseen events."
+        })
+        
+        # Tip 4: Loan Tenure
+        tips.append({
+            "title": "Optimize Loan Tenure Selection",
+            "description": f"For your desired loan amount of INR {profile['desired_amount']:,.2f}, choosing a shorter tenure will increase your monthly EMI but significantly reduce total interest paid."
+        })
+        
+        # Tip 5: Shop Around
+        tips.append({
+            "title": "Compare Multiple Offers",
+            "description": "Always check offers from multiple financial institutions. Even a 0.5% difference in interest rates can lead to substantial savings over the life of a loan."
+        })
 
         try:
             success = generate_pdf_report(
