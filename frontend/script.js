@@ -5,6 +5,29 @@ const BASE_URL = '';
 let emiChartInstance = null;
 let costBreakdownChartInstance = null;
 
+const loanEmojis = {
+  "Home Loan": "🏠",
+  "Personal Loan": "💰",
+  "Car Loan": "🚗",
+  "Vehicle Loan": "🚗",
+  "Auto Loan": "🚗",
+  "Education Loan": "🎓",
+  "Gold Loan": "💍",
+  "Business Loan": "💼"
+};
+
+function getLoanEmoji(type) {
+  if (!type) return "";
+  const t = type.toLowerCase();
+  if (t.includes("home")) return "🏠";
+  if (t.includes("personal")) return "💰";
+  if (t.includes("car") || t.includes("vehicle") || t.includes("auto")) return "🚗";
+  if (t.includes("education")) return "🎓";
+  if (t.includes("gold")) return "💍";
+  if (t.includes("business")) return "💼";
+  return "";
+}
+
 // Parse amount written in natural language (e.g. "12 thousand", "5 lakh", "50k", "1 crore")
 function parseAmount(text) {
   if (typeof text !== 'string') return NaN;
@@ -111,7 +134,19 @@ function appendBotMessage(text) {
   const chatBox = document.getElementById("chatBox");
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble bot";
-  bubble.innerText = text;
+  
+  // Replace loan type names with loan type + emoji
+  let decoratedText = text;
+  const terms = ["Home Loan", "Personal Loan", "Car Loan", "Vehicle Loan", "Education Loan", "Gold Loan", "Business Loan"];
+  terms.forEach(term => {
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
+    decoratedText = decoratedText.replace(regex, (matched) => {
+      const emoji = getLoanEmoji(term);
+      return emoji ? `${matched} ${emoji}` : matched;
+    });
+  });
+  
+  bubble.innerText = decoratedText;
   chatBox.appendChild(bubble);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -196,9 +231,10 @@ function askNextQuestion() {
       break;
     case 7:
       appendBotMessage("What type of loan are you looking for?");
-      showQuickReplies(["Home Loan", "Personal Loan", "Car Loan", "Education Loan"], (val) => {
+      showQuickReplies(["Home Loan 🏠", "Personal Loan 💰", "Car Loan 🚗", "Education Loan 🎓"], (val) => {
         appendUserMessage(val);
-        chatState.data.loan_purpose = val;
+        // Strip the emoji before saving
+        chatState.data.loan_purpose = val.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
         chatState.step++;
         askNextQuestion();
       });
@@ -504,10 +540,10 @@ function populateEligibility(eligibilityData) {
   grid.innerHTML = '';
   
   const displayCategories = [
-    { label: "Home Loan", dbKeys: ["Home Loan", "Home"] },
-    { label: "Personal Loan", dbKeys: ["Personal Loan", "Personal"] },
-    { label: "Auto Loan", dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
-    { label: "Education Loan", dbKeys: ["Education Loan", "Education"] }
+    { label: "Home Loan 🏠", dbKeys: ["Home Loan", "Home"] },
+    { label: "Personal Loan 💰", dbKeys: ["Personal Loan", "Personal"] },
+    { label: "Auto Loan 🚗", dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
+    { label: "Education Loan 🎓", dbKeys: ["Education Loan", "Education"] }
   ];
   
   const typeEligibility = eligibilityData.loan_type_eligibility || {};
@@ -581,11 +617,14 @@ function populateRecommendations(recsObj, comparisonsList, customerId) {
     const advantagesList = (rec.advantages || []).map(adv => `<li>${adv}</li>`).join("");
     const risksList = (rec.risks || []).map(risk => `<li>${risk}</li>`).join("");
     
+    const emoji = getLoanEmoji(rec.loan_type);
+    const typeLabel = emoji ? `${rec.loan_type} ${emoji}` : rec.loan_type;
+
     card.innerHTML = `
       <div class="rec-card-header">
         <div class="rec-bank">
           <h3>${rec.bank_name}</h3>
-          <p>${rec.loan_type} — Rank #${rec.rank}</p>
+          <p>${typeLabel} — Rank #${rec.rank}</p>
         </div>
         <div class="suitability-badge">
           Match ${rec.suitability_score}%
@@ -762,9 +801,12 @@ async function loadKanbanBoard(customerId) {
         btnLabel = 'Re-apply';
       }
       
+      const emoji = getLoanEmoji(app.loan_type);
+      const typeLabel = emoji ? `${app.loan_type} ${emoji}` : app.loan_type;
+
       card.innerHTML = `
         <h5>${app.bank_name}</h5>
-        <p>${app.loan_type}</p>
+        <p>${typeLabel}</p>
         <div class="kanban-actions">
           <button class="kanban-btn" onclick="updateAppStatus(${customerId}, '${app.loan_id}', '${app.bank_name}', '${app.loan_type}', '${nextStatus}')">
             ${btnLabel} <i class="fa-solid fa-arrow-right"></i>
@@ -1075,10 +1117,10 @@ function initWhatIfSimulator(profile, customerId) {
       if (payload.eligibility_summary) {
         const summaries = payload.eligibility_summary;
         const mapping = {
-          "Home Loan": "Home Loan",
-          "Personal Loan": "Personal Loan",
-          "Vehicle Loan": "Auto Loan",
-          "Education Loan": "Education Loan"
+          "Home Loan": "Home Loan 🏠",
+          "Personal Loan": "Personal Loan 💰",
+          "Vehicle Loan": "Auto Loan 🚗",
+          "Education Loan": "Education Loan 🎓"
         };
         const grid = document.getElementById("eligibilityGrid");
         grid.innerHTML = '';
