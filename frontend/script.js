@@ -526,9 +526,11 @@ async function loadDashboardData(customerId) {
       window.originalRecommendations = recsData.recommendations || {};
       window.originalComparisons = compList;
       window.originalCustomerId = customerId;
+      window.originalCreditTierAnalysis = recsData.credit_tier_analysis || null;
       updateRecommendationCards(recsData.recommendations || {}, compList, customerId);
       updateEligibilityBadges(recsData.eligibility || {});
       updateLoanAssessmentSummary(profile, recsData.recommendations || {}, compList);
+      updateCreditAnalysisCard(recsData.credit_tier_analysis);
       renderCharts(compList);
     } else {
       document.getElementById("recommendationsContainer").innerHTML = `
@@ -669,6 +671,61 @@ function updateLoanAssessmentSummary(profile, recsObj, comparisonsList) {
   document.getElementById("summaryEmiBurdenVal").innerText = emiBurden.toFixed(1) + "%";
   document.getElementById("summaryEmiBurdenVal").style.color = emiBurdenColor;
   document.getElementById("summaryEmiBurdenLabel").innerText = emiBurdenText + (newEmi > 0 ? ` (₹${Math.round(newEmi).toLocaleString()}/mo)` : "");
+}
+
+function updateCreditAnalysisCard(analysis) {
+  const section = document.getElementById("creditAnalysisSection");
+  if (!section) return;
+  if (!analysis) {
+    section.style.display = "none";
+    return;
+  }
+  
+  section.style.display = "block";
+  
+  const creditScore = Number(analysis.credit_score) || 300;
+  document.getElementById("creditScoreVal").innerText = creditScore;
+  
+  // Calculate percentage pointer position between 300 and 900
+  let percentage = ((creditScore - 300) / 600) * 100;
+  percentage = Math.max(0, Math.min(100, percentage));
+  
+  const pointer = document.getElementById("creditPointer");
+  if (pointer) {
+    pointer.style.left = `${percentage}%`;
+  }
+  
+  document.getElementById("cardEligibilityVal").innerText = Math.round(analysis.eligibility_score) + "%";
+  
+  const riskDot = document.getElementById("cardRiskDot");
+  const riskText = document.getElementById("cardRiskText");
+  if (riskText) riskText.innerText = analysis.risk_category || "--";
+  if (riskDot) {
+    riskDot.innerText = analysis.risk_dot || "⚫";
+    if (analysis.risk_color === "green") {
+      riskDot.style.color = "var(--color-eligible)";
+    } else if (analysis.risk_color === "yellow") {
+      riskDot.style.color = "var(--color-conditional)";
+    } else if (analysis.risk_color === "orange") {
+      riskDot.style.color = "#ef6c00";
+    } else {
+      riskDot.style.color = "var(--color-rejected)";
+    }
+  }
+  
+  const rateTierVal = document.getElementById("cardRateTierVal");
+  if (rateTierVal) {
+    rateTierVal.innerText = analysis.rate_tier || "--";
+  }
+  
+  const explainerText = document.getElementById("creditExplainerText");
+  if (explainerText) {
+    if (creditScore >= 750) {
+      explainerText.innerHTML = `With a credit score of <strong>${creditScore}</strong>, you qualify for <strong>${analysis.rate_tier_name}</strong> interest rates. You are already in the highest credit tier, qualifying for our best rates.`;
+    } else {
+      explainerText.innerHTML = `With a credit score of <strong>${creditScore}</strong>, you qualify for <strong>${analysis.rate_tier_name}</strong> interest rates. Improving your score by <strong>${analysis.points_needed}</strong> points to reach <strong>${analysis.next_tier}</strong> would unlock rates as low as <strong>${analysis.next_tier_rate}%</strong>.`;
+    }
+  }
 }
 
 
@@ -1147,6 +1204,7 @@ function initWhatIfSimulator(profile, customerId) {
           preferred_tenure: simulatedTenure
         };
         updateLoanAssessmentSummary(simulatedProfile, result.recommendations || {}, compList);
+        updateCreditAnalysisCard(result.credit_tier_analysis);
         
         // 3. Update simulation results section
         const dti = result.dti_ratio || 0;
@@ -1174,6 +1232,7 @@ function initWhatIfSimulator(profile, customerId) {
                 updateEligibilityBadges(window.originalEligibility);
                 updateRecommendationCards(window.originalRecommendations);
                 updateLoanAssessmentSummary(window.currentProfile, window.originalRecommendations || {}, window.originalComparisons);
+                updateCreditAnalysisCard(window.originalCreditTierAnalysis);
                 document.getElementById('simulationResults').innerHTML = '<em>Reset to original results.</em>';
                 // Also restore original charts
                 if (window.originalComparisons && window.originalComparisons.length > 0) {

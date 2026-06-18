@@ -626,7 +626,8 @@ def generate_direct_loan_advisory(profile, customer_id=None):
             "eligibility": eligibility_results,
             "comparisons": comparison_results,
             "recommendations": recommendation_results,
-            "pdf_path": os.path.abspath(pdf_path) if customer_id is not None else None
+            "pdf_path": os.path.abspath(pdf_path) if customer_id is not None else None,
+            "credit_tier_analysis": calculate_credit_tier_analysis(profile)
         }
     except Exception as overall_err:
         logger.error(f"Direct advisory compilation failed: {str(overall_err)}")
@@ -634,6 +635,146 @@ def generate_direct_loan_advisory(profile, customer_id=None):
             "status": "error",
             "message": str(overall_err)
         }
+
+def calculate_credit_tier_analysis(profile):
+    """
+    Calculates detailed credit tier metrics including Eligibility Score, Risk Category,
+    and Interest Rate Tier, along with improvement targets for the dashboard card.
+    """
+    try:
+        from backend.database import get_all_loan_products
+        products = get_all_loan_products()
+    except Exception as e:
+        logger.error(f"Error loading products in calculate_credit_tier_analysis: {str(e)}")
+        products = []
+
+    credit_score = profile.get("credit_score", 0)
+    monthly_income = profile.get("monthly_income", 0)
+    existing_emis = profile.get("existing_emis", 0)
+    dti = (existing_emis / monthly_income * 100) if monthly_income > 0 else 100.0
+
+    # 1. min_income_threshold for the requested loan type
+    categories_mapping = {
+        "Home Loan": ["Home Loan"],
+        "Personal Loan": ["Personal Loan"],
+        "Vehicle Loan": ["Vehicle Loan", "Car Loan"],
+        "Car Loan": ["Vehicle Loan", "Car Loan"],
+        "Education Loan": ["Education Loan"],
+        "Gold Loan": ["Gold Loan"],
+        "Business Loan": ["Business Loan"]
+    }
+    requested_purpose = profile.get("loan_purpose")
+    mapped_types = categories_mapping.get(requested_purpose, [requested_purpose])
+    
+    type_products = [p for p in products if p["loan_type"] in mapped_types]
+    if type_products:
+        min_income_threshold = min(p["min_monthly_income"] for p in type_products)
+    else:
+        min_income_threshold = 0
+
+    # 2. Eligibility Score (0-100%)
+    eligibility_score = 100
+    if credit_score < 600:
+        eligibility_score -= 25
+    elif 600 <= credit_score <= 649:
+        eligibility_score -= 15
+    elif 650 <= credit_score <= 699:
+        eligibility_score -= 5
+        
+    if dti > 40:
+        eligibility_score -= 20
+    elif 30 <= dti <= 40:
+        eligibility_score -= 10
+        
+    if monthly_income < min_income_threshold:
+        eligibility_score -= 10
+        
+    eligibility_score = max(0, min(100, eligibility_score))
+
+    # 3. Risk Category with colored dot
+    if credit_score >= 750 and dti < 30:
+        risk_category = "Low Risk"
+        risk_dot = "🟢"
+        risk_color = "green"
+    elif credit_score >= 650 and dti < 40:
+        risk_category = "Moderate Risk"
+        risk_dot = "🟡"
+        risk_color = "yellow"
+    elif credit_score >= 600:
+        risk_category = "High Risk"
+        risk_dot = "🟠"
+        risk_color = "orange"
+    else:
+        risk_category = "Very High Risk"
+        risk_dot = "🔴"
+        risk_color = "red"
+
+    # 4. Interest Rate Tier
+    qualified_rates = []
+    for p in type_products:
+        if credit_score >= 750:
+            rate = p["interest_rate_min"]
+        elif 650 <= credit_score <= 749:
+            rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+        else:
+            rate = p["interest_rate_max"]
+        qualified_rates.append(rate)
+        
+    if not qualified_rates:
+        # Fallback to all products
+        for p in products:
+            if credit_score >= 750:
+                rate = p["interest_rate_min"]
+            elif 650 <= credit_score <= 749:
+                rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+            else:
+                rate = p["interest_rate_max"]
+            qualified_rates.append(rate)
+
+    min_rate = min(qualified_rates) if qualified_rates else 8.5
+    max_rate = max(qualified_rates) if qualified_rates else 12.0
+
+    if credit_score >= 750:
+        rate_tier_name = "Excellent tier"
+    elif 650 <= credit_score <= 749:
+        rate_tier_name = "Good tier"
+    else:
+        rate_tier_name = "Fair/Poor tier"
+
+    rate_tier_str = f"{min_rate:.1f}% - {max_rate:.1f}% ({rate_tier_name})"
+
+    # 5. Explainer details (points_needed, next_tier, next_tier_rate)
+    if credit_score >= 750:
+        points_needed = 0
+        next_tier = "Excellent tier"
+        next_tier_rate = min_rate
+    elif 650 <= credit_score < 750:
+        points_needed = 750 - credit_score
+        next_tier = "Excellent tier"
+        next_rates = [p["interest_rate_min"] for p in type_products]
+        if not next_rates:
+            next_rates = [p["interest_rate_min"] for p in products]
+        next_tier_rate = min(next_rates) if next_rates else 8.0
+    else:
+        points_needed = 650 - credit_score
+        next_tier = "Good tier"
+        next_rates = [(p["interest_rate_min"] + p["interest_rate_max"]) / 2 for p in type_products]
+        if not next_rates:
+            next_rates = [(p["interest_rate_min"] + p["interest_rate_max"]) / 2 for p in products]
+        next_tier_rate = min(next_rates) if next_rates else 9.0
+
+    return {
+        "credit_score": credit_score,
+        "eligibility_score": eligibility_score,
+        "risk_category": risk_category,
+        "risk_dot": risk_dot,
+        "risk_color": risk_color,
+        "rate_tier": rate_tier_str,
+        "rate_tier_name": rate_tier_name,
+        "points_needed": points_needed,
+        "next_tier": next_tier,
+        "next_tier_rate": next_tier_rate
+    }
 
 @recommendations_bp.route("/run-pipeline", methods=["POST"])
 def run_pipeline():
@@ -702,7 +843,8 @@ def run_pipeline():
                     "customer_id": customer_id,
                     "recommendations": recs,
                     "comparisons": comps,
-                    "eligibility": elig
+                    "eligibility": elig,
+                    "credit_tier_analysis": calculate_credit_tier_analysis(profile)
                 }), 200
             except Exception as assemble_err:
                 logger.error(f"Failed to assemble pipeline output JSON: {str(assemble_err)}")
@@ -793,7 +935,8 @@ def get_customer_recommendations(customer_id):
         return jsonify({
             "status": "success", 
             "recommendations": data["recommendation_data"] if data else {"recommendations": []},
-            "eligibility": data["eligibility_data"] if data else {}
+            "eligibility": data["eligibility_data"] if data else {},
+            "credit_tier_analysis": calculate_credit_tier_analysis(customer)
         }), 200
     except Exception as e:
         logger.error(f"Error fetching recommendations: {str(e)}")

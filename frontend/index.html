@@ -146,6 +146,58 @@
             </div>
           </div>
 
+          <!-- Loan Assessment Overview (Credit Score Impact Analysis) -->
+          <div class="dashboard-section" id="creditAnalysisSection" style="display: none; margin-bottom: 30px;">
+            <div class="section-title">
+              <h3>Loan Assessment Overview <span>Credit Score Impact Analysis</span></h3>
+            </div>
+            <div class="glass-panel credit-analysis-card">
+              <!-- Row 1: Credit Score Meter -->
+              <div class="credit-meter-row">
+                <div class="credit-score-title">
+                  Your Credit Score: <span id="creditScoreVal" class="large-score">--</span>
+                </div>
+                <div class="credit-meter-container">
+                  <div class="credit-gradient-bar"></div>
+                  <div class="credit-pointer" id="creditPointer">
+                    <div class="pointer-arrow">▲</div>
+                  </div>
+                </div>
+                <div class="credit-zones-labels">
+                  <span class="zone-label zone-poor">300-599 Poor</span>
+                  <span class="zone-label zone-fair">600-649 Fair</span>
+                  <span class="zone-label zone-good">650-749 Good</span>
+                  <span class="zone-label zone-excellent">750-900 Excellent</span>
+                </div>
+              </div>
+              
+              <!-- Row 2: 3 Stat Boxes side by side -->
+              <div class="credit-stats-row">
+                <div class="stat-box">
+                  <div class="stat-label">Eligibility Score</div>
+                  <div class="stat-value" id="cardEligibilityVal">--%</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">Risk Category</div>
+                  <div class="stat-value" id="cardRiskVal">
+                    <span id="cardRiskDot" style="margin-right: 4px;">⚫</span><span id="cardRiskText">--</span>
+                  </div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">Interest Rate Tier You Qualify For</div>
+                  <div class="stat-value" id="cardRateTierVal" style="font-size: 15px;">--</div>
+                </div>
+              </div>
+              
+              <!-- Row 3: Small text explainer -->
+              <div class="credit-explainer-row">
+                <p id="creditExplainerText" class="explainer-text">
+                  --
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Recommendation Cards -->
           <div class="dashboard-section">
             <div class="section-title">

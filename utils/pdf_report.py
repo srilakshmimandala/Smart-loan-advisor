@@ -339,6 +339,224 @@ def generate_pdf_report(customer, eligibility, comparisons, recommendations, tip
         story.append(Spacer(1, 15))
         story.append(Paragraph("Loan Assessment Summary", ParagraphStyle('SummaryHeader', parent=section_style, spaceBefore=10, spaceAfter=8)))
         story.append(t_summary)
+        
+        # Credit Score Impact Analysis Section
+        try:
+            from backend.database import get_all_loan_products
+            products = get_all_loan_products()
+        except Exception:
+            try:
+                from database import get_all_loan_products
+                products = get_all_loan_products()
+            except Exception:
+                products = []
+
+        categories_mapping = {
+            "Home Loan": ["Home Loan"],
+            "Personal Loan": ["Personal Loan"],
+            "Vehicle Loan": ["Vehicle Loan", "Car Loan"],
+            "Car Loan": ["Vehicle Loan", "Car Loan"],
+            "Education Loan": ["Education Loan"],
+            "Gold Loan": ["Gold Loan"],
+            "Business Loan": ["Business Loan"]
+        }
+        requested_purpose = customer.get("loan_purpose")
+        mapped_types = categories_mapping.get(requested_purpose, [requested_purpose])
+        
+        type_products = [p for p in products if p["loan_type"] in mapped_types]
+        if type_products:
+            min_income_threshold = min(p["min_monthly_income"] for p in type_products)
+        else:
+            min_income_threshold = 0
+
+        # Eligibility Score (0-100%)
+        card_eligibility_score = 100
+        if credit_score < 600:
+            card_eligibility_score -= 25
+        elif 600 <= credit_score <= 649:
+            card_eligibility_score -= 15
+        elif 650 <= credit_score <= 699:
+            card_eligibility_score -= 5
+            
+        if dti > 40:
+            card_eligibility_score -= 20
+        elif 30 <= dti <= 40:
+            card_eligibility_score -= 10
+            
+        if monthly_income < min_income_threshold:
+            card_eligibility_score -= 10
+            
+        card_eligibility_score = max(0, min(100, card_eligibility_score))
+
+        # Risk Category
+        if credit_score >= 750 and dti < 30:
+            card_risk_category = "Low Risk"
+            card_risk_dot = "🟢"
+            card_risk_color = "#2e7d32"
+        elif credit_score >= 650 and dti < 40:
+            card_risk_category = "Moderate Risk"
+            card_risk_dot = "🟡"
+            card_risk_color = "#ef6c00"
+        elif credit_score >= 600:
+            card_risk_category = "High Risk"
+            card_risk_dot = "🟠"
+            card_risk_color = "#ef6c00"
+        else:
+            card_risk_category = "Very High Risk"
+            card_risk_dot = "🔴"
+            card_risk_color = "#c62828"
+
+        # Interest Rate Tier
+        qualified_rates = []
+        for p in type_products:
+            if credit_score >= 750:
+                rate = p["interest_rate_min"]
+            elif 650 <= credit_score <= 749:
+                rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+            else:
+                rate = p["interest_rate_max"]
+            qualified_rates.append(rate)
+            
+        if not qualified_rates:
+            for p in products:
+                if credit_score >= 750:
+                    rate = p["interest_rate_min"]
+                elif 650 <= credit_score <= 749:
+                    rate = (p["interest_rate_min"] + p["interest_rate_max"]) / 2
+                else:
+                    rate = p["interest_rate_max"]
+                qualified_rates.append(rate)
+
+        min_rate = min(qualified_rates) if qualified_rates else 8.5
+        max_rate = max(qualified_rates) if qualified_rates else 12.0
+
+        if credit_score >= 750:
+            card_rate_tier_name = "Excellent tier"
+        elif 650 <= credit_score <= 749:
+            card_rate_tier_name = "Good tier"
+        else:
+            card_rate_tier_name = "Fair/Poor tier"
+
+        card_rate_tier_str = f"{min_rate:.1f}% - {max_rate:.1f}% ({card_rate_tier_name})"
+
+        # Explainer details
+        if credit_score >= 750:
+            card_points_needed = 0
+            card_next_tier = "Excellent"
+            card_next_tier_rate = min_rate
+        elif 650 <= credit_score < 750:
+            card_points_needed = 750 - credit_score
+            card_next_tier = "Excellent"
+            next_rates = [p["interest_rate_min"] for p in type_products]
+            if not next_rates:
+                next_rates = [p["interest_rate_min"] for p in products]
+            card_next_tier_rate = min(next_rates) if next_rates else 8.0
+        else:
+            card_points_needed = 650 - credit_score
+            card_next_tier = "Good"
+            next_rates = [(p["interest_rate_min"] + p["interest_rate_max"]) / 2 for p in type_products]
+            if not next_rates:
+                next_rates = [(p["interest_rate_min"] + p["interest_rate_max"]) / 2 for p in products]
+            card_next_tier_rate = min(next_rates) if next_rates else 9.0
+
+        # Styles for meter cells
+        poor_cell_style = ParagraphStyle('PoorCell', parent=table_cell_style, fontName='Helvetica-Bold', textColor=WHITE, alignment=1, fontSize=8)
+        fair_cell_style = ParagraphStyle('FairCell', parent=table_cell_style, fontName='Helvetica-Bold', textColor=WHITE, alignment=1, fontSize=8)
+        good_cell_style = ParagraphStyle('GoodCell', parent=table_cell_style, fontName='Helvetica-Bold', textColor=CHARCOAL, alignment=1, fontSize=8)
+        excellent_cell_style = ParagraphStyle('ExcellentCell', parent=table_cell_style, fontName='Helvetica-Bold', textColor=WHITE, alignment=1, fontSize=8)
+        pointer_cell_style = ParagraphStyle('PointerCell', parent=table_cell_style, fontName='Helvetica-Bold', textColor=HexColor("#0288d1"), alignment=1, fontSize=8)
+
+        col1_pointer = ""
+        col2_pointer = ""
+        col3_pointer = ""
+        col4_pointer = ""
+        if credit_score < 600:
+            col1_pointer = f"▲ (Your Score: {credit_score})"
+        elif 600 <= credit_score < 650:
+            col2_pointer = f"▲ (Your Score: {credit_score})"
+        elif 650 <= credit_score < 750:
+            col3_pointer = f"▲ (Your Score: {credit_score})"
+        else:
+            col4_pointer = f"▲ (Your Score: {credit_score})"
+
+        meter_data = [
+            [
+                Paragraph(col1_pointer, pointer_cell_style),
+                Paragraph(col2_pointer, pointer_cell_style),
+                Paragraph(col3_pointer, pointer_cell_style),
+                Paragraph(col4_pointer, pointer_cell_style),
+            ],
+            [
+                Paragraph("300-599 Poor", poor_cell_style),
+                Paragraph("600-649 Fair", fair_cell_style),
+                Paragraph("650-749 Good", good_cell_style),
+                Paragraph("750-900 Excellent", excellent_cell_style)
+            ]
+        ]
+        
+        t_meter = Table(meter_data, colWidths=[252, 42, 84, 126])
+        t_meter.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BACKGROUND', (0,1), (0,1), HexColor("#ef5350")),
+            ('BACKGROUND', (1,1), (1,1), HexColor("#ff9800")),
+            ('BACKGROUND', (2,1), (2,1), HexColor("#ffeb3b")),
+            ('BACKGROUND', (3,1), (3,1), HexColor("#4caf50")),
+            ('GRID', (0,1), (-1,1), 0.5, WHITE),
+        ]))
+
+        stat_box_headers = [
+            Paragraph("Eligibility Score", table_header_center_style),
+            Paragraph("Risk Category", table_header_center_style),
+            Paragraph("Interest Rate Tier You Qualify For", table_header_center_style)
+        ]
+        
+        card_risk_html = f"<font size=10>{card_risk_dot}</font> <font color='{card_risk_color}'><b>{card_risk_category}</b></font>"
+        stat_box_cells = [
+            Paragraph(f"<b>{card_eligibility_score}%</b>", table_cell_center_style),
+            Paragraph(card_risk_html, table_cell_center_style),
+            Paragraph(f"<b>{card_rate_tier_str}</b>", table_cell_center_style)
+        ]
+        t_stats = Table([stat_box_headers, stat_box_cells], colWidths=[168, 168, 168])
+        t_stats.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), NAVY),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('GRID', (0,0), (-1,-1), 0.5, HexColor("#d0d0d0")),
+            ('BACKGROUND', (0,1), (-1,1), LIGHT_GREY),
+        ]))
+
+        if credit_score >= 750:
+            explainer_html = f"With a credit score of <b>{credit_score}</b>, you qualify for <b>{card_rate_tier_name}</b> interest rates. You are already in the highest credit tier, qualifying for our best rates."
+        else:
+            explainer_html = f"With a credit score of <b>{credit_score}</b>, you qualify for <b>{card_rate_tier_name}</b> interest rates. Improving your score by <b>{card_points_needed}</b> points to reach <b>{card_next_tier} tier</b> would unlock rates as low as <b>{card_next_tier_rate:.1f}%</b>."
+            
+        explainer_style = ParagraphStyle(
+            'PdfExplainerStyle',
+            parent=body_style,
+            fontSize=9,
+            leading=13,
+            backColor=HexColor("#f0f4c3") if credit_score >= 750 else HexColor("#e3f2fd"),
+            borderColor=HexColor("#81c784") if credit_score >= 750 else HexColor("#64b5f6"),
+            borderWidth=1,
+            borderPadding=8,
+            spaceBefore=6,
+            spaceAfter=6
+        )
+        p_explainer = Paragraph(explainer_html, explainer_style)
+
+        story.append(Spacer(1, 15))
+        story.append(Paragraph("Credit Score Impact Analysis", ParagraphStyle('CreditHeader', parent=section_style, spaceBefore=10, spaceAfter=8)))
+        story.append(t_meter)
+        story.append(Spacer(1, 10))
+        story.append(t_stats)
+        story.append(Spacer(1, 10))
+        story.append(p_explainer)
+        
         story.append(PageBreak())
         
         # ==========================================

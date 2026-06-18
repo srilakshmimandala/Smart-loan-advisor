@@ -999,8 +999,128 @@ header {
   margin-top: auto;
 }
 
+/* Credit Analysis Card Styling */
+.credit-analysis-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.credit-meter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.credit-score-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.large-score {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-left: 6px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.credit-meter-container {
+  position: relative;
+  height: 12px;
+  margin: 15px 0 10px 0;
+}
+
+.credit-gradient-bar {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(to right, #ef4444 0%, #f59e0b 50%, #facc15 65%, #10b981 100%);
+}
+
+.credit-pointer {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.5s ease-in-out;
+}
+
+.pointer-arrow {
+  font-size: 16px;
+  color: var(--accent-gold);
+  text-shadow: 0 0 8px var(--accent-gold);
+  line-height: 1;
+}
+
+.credit-zones-labels {
+  display: grid;
+  grid-template-columns: 252fr 42fr 84fr 126fr;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.zone-label {
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.credit-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.credit-explainer-row {
+  background: rgba(0, 242, 254, 0.03);
+  border-left: 3px solid var(--accent-gold);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+}
+
+.explainer-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 /* Responsive CSS Media Queries for Mobile Screens below 768px */
 @media (max-width: 768px) {
+  .credit-stats-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
   /* Stack the dashboard sidebar below main content */
   .dashboard-grid {
     grid-template-columns: 1fr;
