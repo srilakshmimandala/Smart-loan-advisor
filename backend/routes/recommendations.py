@@ -57,7 +57,7 @@ def clean_recommendation_texts(recs, profile):
                 
     return recs
 
-def generate_direct_loan_advisory(profile, customer_id):
+def generate_direct_loan_advisory(profile, customer_id=None):
     try:
         from groq import Groq
         from utils.pdf_report import generate_pdf_report
@@ -65,7 +65,8 @@ def generate_direct_loan_advisory(profile, customer_id):
         from datetime import datetime
 
         # 1. Log Start of Data Collector Agent
-        save_agent_log(customer_id, "DataCollectorAgent", "Intake Validation", "SUCCESS", "Profile validated and structured.")
+        if customer_id is not None:
+            save_agent_log(customer_id, "DataCollectorAgent", "Intake Validation", "SUCCESS", "Profile validated and structured.")
 
         # 2. Eligibility Verification
         rules_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "eligibility_rules.json")
@@ -390,7 +391,8 @@ def generate_direct_loan_advisory(profile, customer_id):
             "eligible_products": eligible_ids,
             "details": eligibility_details
         }
-        save_agent_log(customer_id, "EligibilityAnalyzerAgent", "Eligibility Check", "SUCCESS", f"Found {len(eligible_ids)} eligible products.")
+        if customer_id is not None:
+            save_agent_log(customer_id, "EligibilityAnalyzerAgent", "Eligibility Check", "SUCCESS", f"Found {len(eligible_ids)} eligible products.")
 
         # 3. Loan Cost Comparison
         comp_list = []
@@ -448,7 +450,8 @@ def generate_direct_loan_advisory(profile, customer_id):
                 "best_rate": best_rate_rank
             }
         }
-        save_agent_log(customer_id, "LoanComparatorAgent", "Loan Cost Comparison", "SUCCESS", "Comparison and rankings completed.")
+        if customer_id is not None:
+            save_agent_log(customer_id, "LoanComparatorAgent", "Loan Cost Comparison", "SUCCESS", "Comparison and rankings completed.")
 
         # 4. Generate Recommendations using direct Groq API call
         # Sort by lowest interest rate
@@ -536,7 +539,8 @@ def generate_direct_loan_advisory(profile, customer_id):
                             "reason": "Recommended by advisor based on financial details."
                         }
 
-        save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated.")
+        if customer_id is not None:
+            save_agent_log(customer_id, "RecommendationEngineAgent", "Advisory Recommendations", "SUCCESS", "Personalized recommendations generated.")
 
         # 5. Generate PDF report
         clean_name = "".join(x for x in profile.get("name", "client") if x.isalnum()).lower()
@@ -588,30 +592,31 @@ def generate_direct_loan_advisory(profile, customer_id):
             "description": "Always check offers from multiple financial institutions. Even a 0.5% difference in interest rates can lead to substantial savings over the life of a loan."
         })
 
-        try:
-            success = generate_pdf_report(
-                customer=profile,
-                eligibility=eligibility_results,
-                comparisons=comparison_results,
-                recommendations=recommendation_results,
-                tips=tips,
-                output_path=pdf_path
-            )
-            if success:
-                save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "SUCCESS", f"Report saved at {pdf_path}")
-            else:
-                save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "FAILED", "PDF generator returned False.")
-        except Exception as pdf_err:
-            logger.error(f"PDF compilation failed: {str(pdf_err)}")
-            save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "FAILED", str(pdf_err))
+        if customer_id is not None:
+            try:
+                success = generate_pdf_report(
+                    customer=profile,
+                    eligibility=eligibility_results,
+                    comparisons=comparison_results,
+                    recommendations=recommendation_results,
+                    tips=tips,
+                    output_path=pdf_path
+                )
+                if success:
+                    save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "SUCCESS", f"Report saved at {pdf_path}")
+                else:
+                    save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "FAILED", "PDF generator returned False.")
+            except Exception as pdf_err:
+                logger.error(f"PDF compilation failed: {str(pdf_err)}")
+                save_agent_log(customer_id, "ReportGeneratorAgent", "PDF Generation", "FAILED", str(pdf_err))
 
-        # 6. Save recommendations, comparison and eligibility to database
-        save_recommendations(
-            customer_id=customer_id,
-            recommendation_data=recommendation_results,
-            comparison_data=comparison_results,
-            eligibility_data=eligibility_results
-        )
+            # 6. Save recommendations, comparison and eligibility to database
+            save_recommendations(
+                customer_id=customer_id,
+                recommendation_data=recommendation_results,
+                comparison_data=comparison_results,
+                eligibility_data=eligibility_results
+            )
 
         return {
             "status": "success",
@@ -620,7 +625,7 @@ def generate_direct_loan_advisory(profile, customer_id):
             "eligibility": eligibility_results,
             "comparisons": comparison_results,
             "recommendations": recommendation_results,
-            "pdf_path": os.path.abspath(pdf_path)
+            "pdf_path": os.path.abspath(pdf_path) if customer_id is not None else None
         }
     except Exception as overall_err:
         logger.error(f"Direct advisory compilation failed: {str(overall_err)}")
@@ -901,6 +906,22 @@ def download_report(customer_id):
     except Exception as e:
         logger.error(f"Error sending report PDF: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@recommendations_bp.route('/simulate-scenario', methods=['POST'])
+def simulate_scenario():
+    data = request.json
+    profile = data.get("profile", {})
+    
+    # Override profile fields with simulated values
+    profile["monthly_income"] = data.get("simulated_income", profile.get("monthly_income", 0))
+    profile["desired_amount"] = data.get("simulated_amount", profile.get("desired_amount", 0))
+    profile["tenure_months"] = int(data.get("simulated_tenure_years", 3)) * 12
+    profile["preferred_tenure"] = int(data.get("simulated_tenure_years", 3))
+    
+    # Re-run the same eligibility + recommendation logic
+    # Call generate_direct_loan_advisory(profile) and return its result
+    result = generate_direct_loan_advisory(profile)
+    return jsonify(result)
 
 @recommendations_bp.route("/recommendations/what-if", methods=["POST"])
 def what_if_simulator():
