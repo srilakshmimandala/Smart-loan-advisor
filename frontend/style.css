@@ -951,6 +951,54 @@ header {
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* Assessment Summary Bar Styling */
+.assessment-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  padding: 24px;
+}
+
+.assessment-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.progress-bar-container.mini {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
+.metric-subtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
 /* Responsive CSS Media Queries for Mobile Screens below 768px */
 @media (max-width: 768px) {
   /* Stack the dashboard sidebar below main content */
@@ -1025,5 +1073,17 @@ header {
   .nav-btn {
     padding: 8px 16px;
     font-size: 12px;
+  }
+
+  .assessment-summary-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .assessment-summary-bar {
+    grid-template-columns: 1fr;
   }
 }

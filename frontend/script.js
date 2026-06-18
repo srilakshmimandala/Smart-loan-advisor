@@ -528,6 +528,7 @@ async function loadDashboardData(customerId) {
       window.originalCustomerId = customerId;
       updateRecommendationCards(recsData.recommendations || {}, compList, customerId);
       updateEligibilityBadges(recsData.eligibility || {});
+      updateLoanAssessmentSummary(profile, recsData.recommendations || {}, compList);
       renderCharts(compList);
     } else {
       document.getElementById("recommendationsContainer").innerHTML = `
@@ -553,6 +554,123 @@ async function loadDashboardData(customerId) {
     console.error("Dashboard load failed:", error);
   }
 }
+
+function updateLoanAssessmentSummary(profile, recsObj, comparisonsList) {
+  const summarySection = document.getElementById("assessmentSummarySection");
+  if (!summarySection) return;
+  
+  summarySection.style.display = "block";
+  
+  const credit_score = Number(profile.credit_score) || 0;
+  const monthly_income = Number(String(profile.monthly_income).replace(/[₹$,]/g, '')) || 0;
+  const existing_emis = Number(String(profile.existing_emis).replace(/[₹$,]/g, '')) || 0;
+  
+  // Calculate DTI
+  const dti = monthly_income > 0 ? (existing_emis / monthly_income) * 100 : 0;
+  
+  // 1. Eligibility Score
+  let eligibilityScore = 100;
+  if (credit_score < 650) eligibilityScore -= 20;
+  if (credit_score < 700) eligibilityScore -= 10;
+  if (dti > 40) eligibilityScore -= 20;
+  if (dti > 30) eligibilityScore -= 15;
+  if (monthly_income < 20000) eligibilityScore -= 10;
+  eligibilityScore = Math.max(0, Math.min(100, eligibilityScore));
+  
+  // 2. Approval Probability
+  let approvalProbability = 60;
+  if (credit_score >= 750) approvalProbability += 20;
+  if (credit_score >= 700) approvalProbability += 10;
+  if (dti < 30) approvalProbability += 10;
+  if (dti < 20) approvalProbability += 5;
+  if (credit_score < 600) approvalProbability -= 20;
+  if (dti > 40) approvalProbability -= 10;
+  approvalProbability = Math.max(0, Math.min(100, approvalProbability));
+  
+  // 3. Risk Category
+  let riskCategory = "";
+  let riskDot = "";
+  let riskColor = "";
+  
+  if (credit_score >= 750 && dti < 30) {
+    riskCategory = "Low Risk";
+    riskDot = "🟢";
+    riskColor = "var(--color-eligible)";
+  } else if (credit_score >= 650 && dti < 40) {
+    riskCategory = "Medium Risk";
+    riskDot = "🟡";
+    riskColor = "var(--color-conditional)";
+  } else if (credit_score >= 600 || dti < 50) {
+    riskCategory = "High Risk";
+    riskDot = "🟠";
+    riskColor = "#ef6c00";
+  } else {
+    riskCategory = "Very High Risk";
+    riskDot = "🔴";
+    riskColor = "var(--color-rejected)";
+  }
+  
+  // 4. EMI Burden
+  let list = [];
+  if (Array.isArray(recsObj)) {
+    list = recsObj;
+  } else if (recsObj && Array.isArray(recsObj.recommendations)) {
+    list = recsObj.recommendations;
+  }
+  const topRec = list.find(r => r.rank === 1) || list[0];
+  let newEmi = 0;
+  if (topRec) {
+    const comp = comparisonsList.find(c => c.loan_id === topRec.loan_id) || {};
+    newEmi = comp.monthly_emi || 0;
+  }
+  
+  const emiBurden = monthly_income > 0 ? (newEmi / monthly_income) * 100 : 0;
+  let emiBurdenColor = "";
+  let emiBurdenText = "";
+  if (emiBurden < 30) {
+    emiBurdenColor = "var(--color-eligible)";
+    emiBurdenText = "Low Burden";
+  } else if (emiBurden <= 40) {
+    emiBurdenColor = "var(--color-conditional)";
+    emiBurdenText = "Moderate Burden";
+  } else {
+    emiBurdenColor = "var(--color-rejected)";
+    emiBurdenText = "High Burden";
+  }
+  
+  document.getElementById("summaryEligibilityVal").innerText = Math.round(eligibilityScore) + "%";
+  document.getElementById("summaryEligibilityBar").style.width = eligibilityScore + "%";
+  
+  const elBar = document.getElementById("summaryEligibilityBar");
+  if (eligibilityScore >= 70) {
+    elBar.style.background = "var(--color-eligible)";
+  } else if (eligibilityScore >= 40) {
+    elBar.style.background = "var(--color-conditional)";
+  } else {
+    elBar.style.background = "var(--color-rejected)";
+  }
+  
+  document.getElementById("summaryProbabilityVal").innerText = Math.round(approvalProbability) + "%";
+  document.getElementById("summaryProbabilityBar").style.width = approvalProbability + "%";
+  
+  const prBar = document.getElementById("summaryProbabilityBar");
+  if (approvalProbability >= 70) {
+    prBar.style.background = "var(--color-eligible)";
+  } else if (approvalProbability >= 40) {
+    prBar.style.background = "var(--color-conditional)";
+  } else {
+    prBar.style.background = "var(--color-rejected)";
+  }
+  
+  document.getElementById("summaryRiskDot").innerText = riskDot;
+  document.getElementById("summaryRiskText").innerText = riskCategory;
+  document.getElementById("summaryRiskText").style.color = riskColor;
+  
+  document.getElementById("summaryEmiBurdenVal").innerText = emiBurden.toFixed(1) + "%";
+  document.getElementById("summaryEmiBurdenVal").style.color = emiBurdenColor;
+  document.getElementById("summaryEmiBurdenLabel").innerText = emiBurdenText + (newEmi > 0 ? ` (₹${Math.round(newEmi).toLocaleString()}/mo)` : "");
+}
+
 
 function updateEligibilityBadges(eligibilityData) {
   const grid = document.getElementById("eligibilityGrid");
@@ -1021,6 +1139,15 @@ function initWhatIfSimulator(profile, customerId) {
         // 2. Update recommendation cards
         updateRecommendationCards(result.recommendations);
         
+        // Update Loan Assessment Summary bar
+        const simulatedProfile = {
+          ...window.currentProfile,
+          monthly_income: simulatedIncome,
+          desired_amount: simulatedAmount,
+          preferred_tenure: simulatedTenure
+        };
+        updateLoanAssessmentSummary(simulatedProfile, result.recommendations || {}, compList);
+        
         // 3. Update simulation results section
         const dti = result.dti_ratio || 0;
         const recCount = result.recommendations 
@@ -1046,6 +1173,7 @@ function initWhatIfSimulator(profile, customerId) {
             resetBtn.onclick = function() {
                 updateEligibilityBadges(window.originalEligibility);
                 updateRecommendationCards(window.originalRecommendations);
+                updateLoanAssessmentSummary(window.currentProfile, window.originalRecommendations || {}, window.originalComparisons);
                 document.getElementById('simulationResults').innerHTML = '<em>Reset to original results.</em>';
                 // Also restore original charts
                 if (window.originalComparisons && window.originalComparisons.length > 0) {

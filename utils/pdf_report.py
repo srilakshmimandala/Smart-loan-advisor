@@ -168,6 +168,18 @@ def generate_pdf_report(customer, eligibility, comparisons, recommendations, tip
             textColor=WHITE
         )
 
+        table_cell_center_style = ParagraphStyle(
+            'TableCellCenter',
+            parent=table_cell_style,
+            alignment=1
+        )
+
+        table_header_center_style = ParagraphStyle(
+            'TableHeaderCenter',
+            parent=table_header_style,
+            alignment=1
+        )
+
         rec_card_title_style = ParagraphStyle(
             'RecCardTitle',
             parent=styles['Normal'],
@@ -226,6 +238,107 @@ def generate_pdf_report(customer, eligibility, comparisons, recommendations, tip
             ('GRID', (0,0), (-1,-1), 0.5, HexColor("#d0d0d0")),
         ]))
         story.append(t1)
+
+        # Replicate metric calculations for Page 1 Summary
+        credit_score = customer.get("credit_score", 0)
+        monthly_income = customer.get("monthly_income", 0)
+        existing_emis = customer.get("existing_emis", 0)
+        dti = (existing_emis / monthly_income * 100) if monthly_income > 0 else 0
+        
+        # 1. Eligibility Score
+        eligibility_score = 100
+        if credit_score < 650:
+            eligibility_score -= 20
+        if credit_score < 700:
+            eligibility_score -= 10
+        if dti > 40:
+            eligibility_score -= 20
+        if dti > 30:
+            eligibility_score -= 15
+        if monthly_income < 20000:
+            eligibility_score -= 10
+        eligibility_score = max(0, min(100, eligibility_score))
+        
+        # 2. Approval Probability
+        approval_probability = 60
+        if credit_score >= 750:
+            approval_probability += 20
+        if credit_score >= 700:
+            approval_probability += 10
+        if dti < 30:
+            approval_probability += 10
+        if dti < 20:
+            approval_probability += 5
+        if credit_score < 600:
+            approval_probability -= 20
+        if dti > 40:
+            approval_probability -= 10
+        approval_probability = max(0, min(100, approval_probability))
+        
+        # 3. Risk Category
+        if credit_score >= 750 and dti < 30:
+            risk_category = "Low Risk"
+            risk_dot = "🟢"
+            risk_color = "#2e7d32"
+        elif credit_score >= 650 and dti < 40:
+            risk_category = "Medium Risk"
+            risk_dot = "🟡"
+            risk_color = "#ef6c00"
+        elif credit_score >= 600 or dti < 50:
+            risk_category = "High Risk"
+            risk_dot = "🟠"
+            risk_color = "#ef6c00"
+        else:
+            risk_category = "Very High Risk"
+            risk_dot = "🔴"
+            risk_color = "#c62828"
+            
+        # 4. EMI Burden
+        new_emi = 0
+        recs_list = recommendations.get("recommendations", []) if recommendations else []
+        if recs_list:
+            top_rec = next((r for r in recs_list if r.get("rank") == 1), recs_list[0])
+            loan_id = top_rec.get("loan_id")
+            for c in comparisons.get("comparisons", []):
+                if c.get("loan_id") == loan_id:
+                    new_emi = c.get("monthly_emi", 0)
+                    break
+        emi_burden = (new_emi / monthly_income * 100) if monthly_income > 0 else 0
+        burden_color = "#2e7d32" if emi_burden < 30 else ("#ef6c00" if emi_burden <= 40 else "#c62828")
+
+        summary_headers = [
+            Paragraph("Eligibility Score", table_header_center_style),
+            Paragraph("Approval Probability", table_header_center_style),
+            Paragraph("Risk Category", table_header_center_style),
+            Paragraph("EMI Burden", table_header_center_style)
+        ]
+        
+        score_html = f"<b>{eligibility_score}%</b>"
+        prob_html = f"<b>{approval_probability}%</b>"
+        risk_html = f"<font size=12>{risk_dot}</font> <font color='{risk_color}'><b>{risk_category}</b></font>"
+        burden_html = f"<font color='{burden_color}'><b>{emi_burden:.1f}%</b></font>"
+        
+        summary_cells = [
+            Paragraph(score_html, table_cell_center_style),
+            Paragraph(prob_html, table_cell_center_style),
+            Paragraph(risk_html, table_cell_center_style),
+            Paragraph(burden_html, table_cell_center_style)
+        ]
+        
+        t_summary = Table([summary_headers, summary_cells], colWidths=[126, 126, 126, 126])
+        t_summary.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), NAVY),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('TOPPADDING', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, HexColor("#d0d0d0")),
+            ('BACKGROUND', (0,1), (-1,1), WHITE),
+        ]))
+        
+        story.append(Spacer(1, 15))
+        story.append(Paragraph("Loan Assessment Summary", ParagraphStyle('SummaryHeader', parent=section_style, spaceBefore=10, spaceAfter=8)))
+        story.append(t_summary)
         story.append(PageBreak())
         
         # ==========================================
