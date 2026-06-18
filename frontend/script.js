@@ -472,8 +472,9 @@ async function loadDashboardData(customerId) {
     if (profileData.status !== "success") {
       throw new Error(profileData.message);
     }
-    const profile = profileData.profile;
+    const profile = profileData.profile || profileData.customer_profile;
     window.currentProfile = profile;
+    console.log("Profile loaded:", window.currentProfile);
     
     // Populate profile details
     document.getElementById("clientName").innerText = profile.name;
@@ -524,8 +525,9 @@ async function loadDashboardData(customerId) {
       window.originalEligibility = recsData.eligibility || {};
       window.originalRecommendations = recsData.recommendations || {};
       window.originalComparisons = compList;
-      populateRecommendations(recsData.recommendations || {}, compList, customerId);
-      populateEligibility(recsData.eligibility || {});
+      window.originalCustomerId = customerId;
+      updateRecommendationCards(recsData.recommendations || {}, compList, customerId);
+      updateEligibilityBadges(recsData.eligibility || {});
       renderCharts(compList);
     } else {
       document.getElementById("recommendationsContainer").innerHTML = `
@@ -553,7 +555,7 @@ async function loadDashboardData(customerId) {
   }
 }
 
-function populateEligibility(eligibilityData) {
+function updateEligibilityBadges(eligibilityData) {
   const grid = document.getElementById("eligibilityGrid");
   if (!grid) return;
   
@@ -608,8 +610,9 @@ function populateEligibility(eligibilityData) {
   });
 }
 
-function populateRecommendations(recsObj, comparisonsList, customerId) {
+function updateRecommendationCards(recsObj, comparisonsList, customerId) {
   const container = document.getElementById("recommendationsContainer");
+  if (!container) return;
   container.innerHTML = '';
   
   const list = recsObj.recommendations || [];
@@ -622,9 +625,12 @@ function populateRecommendations(recsObj, comparisonsList, customerId) {
     return;
   }
   
+  const compList = comparisonsList || window.lastSimulatedComparisons || window.originalComparisons || [];
+  const custId = customerId || window.originalCustomerId || localStorage.getItem("currentCustomerId") || 1;
+  
   list.forEach((rec) => {
     // Find financial calculations from comparison list matching loan_id
-    const comp = comparisonsList.find(c => c.loan_id === rec.loan_id) || {};
+    const comp = compList.find(c => c.loan_id === rec.loan_id) || {};
     
     const card = document.createElement("div");
     card.className = `rec-card glass-panel rank-${rec.rank}`;
@@ -1056,16 +1062,15 @@ function initInteractiveCalculator(profile) {
 
 // "What-If" Scenario Simulator logic
 function initWhatIfSimulator(profile, customerId) {
-  const simIncome = document.getElementById("simIncome");
-  const simAmount = document.getElementById("simAmount");
-  const simTenure = document.getElementById("simTenure");
+  const simIncome = document.getElementById("incomeSlider");
+  const simAmount = document.getElementById("amountSlider");
+  const simTenure = document.getElementById("tenureSlider");
   
   const sValIncome = document.getElementById("simValIncome");
   const sValAmount = document.getElementById("simValAmount");
   const sValTenure = document.getElementById("simValTenure");
   
-  const runBtn = document.getElementById("runSimBtn");
-  const resetBtn = document.getElementById("resetSimBtn");
+  const runBtn = document.getElementById("recalculateBtn");
   
   function updateSliders() {
     sValIncome.innerText = "₹" + parseInt(simIncome.value).toLocaleString('en-IN');
@@ -1101,146 +1106,91 @@ function initWhatIfSimulator(profile, customerId) {
   simAmount.addEventListener("input", updateSliders);
   simTenure.addEventListener("input", updateSliders);
   
-  runBtn.onclick = async () => {
-    runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Recalculating...`;
+  runBtn.addEventListener('click', async function() {
+    
+    const simulatedIncome = parseFloat(
+        document.getElementById('incomeSlider').value);
+    const simulatedAmount = parseFloat(
+        document.getElementById('amountSlider').value);
+    const simulatedTenure = parseFloat(
+        document.getElementById('tenureSlider').value);
+    
+    // Show loading state
+    this.textContent = 'Recalculating...';
+    this.disabled = true;
     
     try {
-      const simulatedIncome = parseFloat(simIncome.value);
-      const simulatedAmount = parseFloat(simAmount.value);
-      const simulatedTenureYears = parseInt(simTenure.value);
-      
-      const res = await fetch(`${BASE_URL}/api/simulate-scenario`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: window.currentProfile,
-          simulated_income: simulatedIncome,
-          simulated_amount: simulatedAmount,
-          simulated_tenure_years: simulatedTenureYears
-        })
-      });
-      
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.message);
-      
-      // Update UI elements
-      document.getElementById("simResultBox").style.display = "block";
-      document.getElementById("simResultDti").innerText = payload.eligibility.dti_ratio.toFixed(2) + "%";
-      document.getElementById("simResultSummary").innerText = "With these changes, you qualify for " + (payload.eligibility.eligible_products ? payload.eligibility.eligible_products.length : 0) + " loan products";
-      
-      // Highlight DTI color
-      const dtiEl = document.getElementById("simResultDti");
-      if (payload.eligibility.dti_ratio > 50) {
-        dtiEl.style.color = "var(--color-rejected)";
-      } else if (payload.eligibility.dti_ratio > 40) {
-        dtiEl.style.color = "var(--color-conditional)";
-      } else {
-        dtiEl.style.color = "var(--color-eligible)";
-      }
-      
-      // Re-populate eligibility cards with simulated statuses
-      if (payload.eligibility) {
-        populateEligibility(payload.eligibility);
-      }
-      
-      // Update Recommendations
-      const compList = payload.comparisons ? (Array.isArray(payload.comparisons) ? payload.comparisons : (payload.comparisons.comparisons || [])) : [];
-      populateRecommendations(payload.recommendations || {}, compList, customerId);
-      
-      // Refresh comparison charts with simulated comparisons
-      if (compList && compList.length > 0) {
-        renderCharts(compList);
-      }
-      
-      // Show yellow "[Simulated]" label next to Eligibility section heading
-      document.getElementById("simulatedLabel").style.display = "inline";
-      
-      // Show reset button
-      resetBtn.style.display = "block";
-      
-      // List which loan types changed status
-      function getEligibilityStatus(eligibilityObj, category) {
-        const typeEligibility = eligibilityObj?.loan_type_eligibility || {};
-        const dbKeys = {
-          "Home Loan": ["Home Loan", "Home"],
-          "Personal Loan": ["Personal Loan", "Personal"],
-          "Vehicle Loan": ["Car Loan", "Vehicle Loan", "Vehicle"],
-          "Education Loan": ["Education Loan", "Education"]
-        }[category] || [category];
+        const response = await fetch('/api/simulate-scenario', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                profile: window.currentProfile,
+                simulated_income: simulatedIncome,
+                simulated_amount: simulatedAmount,
+                simulated_tenure_years: simulatedTenure
+            })
+        });
         
-        let details = null;
-        for (const key of dbKeys) {
-          if (typeEligibility[key]) {
-            details = typeEligibility[key];
-            break;
-          }
+        const result = await response.json();
+        
+        // Save comparisons globally so updateRecommendationCards can access them
+        const compList = result.comparisons ? (Array.isArray(result.comparisons) ? result.comparisons : (result.comparisons.comparisons || [])) : [];
+        window.lastSimulatedComparisons = compList;
+        if (compList && compList.length > 0) {
+          renderCharts(compList);
         }
         
-        let status = "Not Eligible";
-        if (details) {
-          let match = "";
-          if (typeof details === "string") {
-            match = details.toLowerCase();
-          } else if (typeof details === "object" && details !== null) {
-            match = (details.status || "").toLowerCase();
-          }
-          
-          if (match === "eligible") {
-            status = "Eligible";
-          } else if (match && match.includes("conditional")) {
-            status = "Conditionally Eligible";
-          }
+        // 1. Update eligibility badges
+        updateEligibilityBadges(result.eligibility);
+        
+        // 2. Update recommendation cards
+        updateRecommendationCards(result.recommendations);
+        
+        // 3. Update simulation results section
+        const dti = result.dti_ratio || 0;
+        const recCount = result.recommendations 
+            ? (result.recommendations.recommendations ? result.recommendations.recommendations.length : result.recommendations.length) : 0;
+        document.getElementById('simulationResults').innerHTML = `
+            <strong>Simulation Results:</strong><br>
+            DTI Ratio: <span style="color: ${dti < 40 ? 
+                '#00ff88' : dti < 50 ? '#ffaa00' : '#ff4444'}">
+                ${dti.toFixed(2)}%</span><br>
+            Qualifying products: <strong>${recCount}</strong><br>
+            <em style="color: #aaa; font-size: 0.85em">
+            [Simulated] — showing results for modified profile</em>
+        `;
+        document.getElementById('simulationResults').style.display = 'block';
+        
+        // 4. Add reset button if not already there
+        if (!document.getElementById('resetSimBtn')) {
+            const resetBtn = document.createElement('button');
+            resetBtn.id = 'resetSimBtn';
+            resetBtn.textContent = '↺ Reset to Original';
+            resetBtn.style.cssText = 
+                'margin-top:10px; padding:8px 16px; background:#333; color:#fff; border:1px solid #555; border-radius:6px; cursor:pointer; width:100%';
+            resetBtn.onclick = function() {
+                updateEligibilityBadges(window.originalEligibility);
+                updateRecommendationCards(window.originalRecommendations);
+                document.getElementById('simulationResults').innerHTML = '<em>Reset to original results.</em>';
+                // Also restore original charts
+                if (window.originalComparisons && window.originalComparisons.length > 0) {
+                  renderCharts(window.originalComparisons);
+                }
+                this.remove();
+            };
+            document.getElementById('simulationResults').after(resetBtn);
         }
-        return status;
-      }
-      
-      const categories = ["Home Loan", "Personal Loan", "Vehicle Loan", "Education Loan"];
-      const changesContainer = document.getElementById("simResultChanges");
-      changesContainer.innerHTML = "";
-      
-      let changedCount = 0;
-      categories.forEach(cat => {
-        const origStatus = getEligibilityStatus(window.originalEligibility, cat);
-        const simStatus = getEligibilityStatus(payload.eligibility, cat);
-        if (origStatus.toUpperCase() !== simStatus.toUpperCase()) {
-          const li = document.createElement("li");
-          li.innerHTML = `<strong>${cat}</strong>: ${origStatus.toUpperCase()} &rarr; ${simStatus.toUpperCase()}`;
-          changesContainer.appendChild(li);
-          changedCount++;
-        }
-      });
-      
-      if (changedCount === 0) {
-        const li = document.createElement("li");
-        li.style.fontStyle = "italic";
-        li.innerText = "No category statuses changed.";
-        changesContainer.appendChild(li);
-      }
-      
-    } catch (err) {
-      alert(`Simulation error: ${err.message}`);
+        
+    } catch(err) {
+        console.error('Simulate error:', err);
+        document.getElementById('simulationResults').innerHTML = 
+            '<span style="color:red">Error running simulation. Check console.</span>';
+        document.getElementById('simulationResults').style.display = 'block';
     } finally {
-      runBtn.innerHTML = `<i class="fa-solid fa-play"></i> Recalculate Scenario`;
+        this.textContent = '▶ Recalculate Scenario';
+        this.disabled = false;
     }
-  };
-  
-  resetBtn.onclick = () => {
-    // Hide simulated elements
-    document.getElementById("simulatedLabel").style.display = "none";
-    document.getElementById("simResultBox").style.display = "none";
-    resetBtn.style.display = "none";
-    
-    // Restore original HTML eligibility badges
-    populateEligibility(window.originalEligibility);
-    
-    // Restore original HTML recommendations
-    populateRecommendations(window.originalRecommendations, window.originalComparisons, customerId);
-    
-    // Restore original charts
-    if (window.originalComparisons && window.originalComparisons.length > 0) {
-      renderCharts(window.originalComparisons);
-    }
-  };
+  });
 }
 
 // Loan Improvement Advisor Action Plan

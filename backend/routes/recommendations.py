@@ -908,18 +908,22 @@ def download_report(customer_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @recommendations_bp.route('/simulate-scenario', methods=['POST'])
+@recommendations_bp.route('/api/simulate-scenario', methods=['POST'])
 def simulate_scenario():
+    from flask import request, jsonify
     data = request.json
     profile = data.get("profile", {})
     
-    # Override profile fields with simulated values
-    profile["monthly_income"] = data.get("simulated_income", profile.get("monthly_income", 0))
-    profile["desired_amount"] = data.get("simulated_amount", profile.get("desired_amount", 0))
-    profile["tenure_months"] = int(data.get("simulated_tenure_years", 3)) * 12
-    profile["preferred_tenure"] = int(data.get("simulated_tenure_years", 3))
+    # Override with simulated values
+    profile["monthly_income"] = float(data.get("simulated_income", 
+        profile.get("monthly_income", 0)))
+    profile["desired_amount"] = float(data.get("simulated_amount", 
+        profile.get("desired_amount", 0)))
+    profile["tenure_months"] = int(float(data.get(
+        "simulated_tenure_years", 3))) * 12
+    profile["preferred_tenure"] = int(float(data.get(
+        "simulated_tenure_years", 3)))
     
-    # Re-run the same eligibility + recommendation logic
-    # Call generate_direct_loan_advisory(profile) and return its result
     result = generate_direct_loan_advisory(profile)
     return jsonify(result)
 

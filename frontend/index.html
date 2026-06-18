@@ -235,39 +235,24 @@
               
               <div class="calc-control">
                 <label>Simulated Income (Monthly) <span id="simValIncome">₹--</span></label>
-                <input type="range" id="simIncome" class="range-slider" min="15000" max="500000" step="5000" value="50000">
+                <input type="range" id="incomeSlider" class="range-slider" min="15000" max="500000" step="5000" value="50000">
               </div>
 
               <div class="calc-control">
                 <label>Simulated Loan Amount <span id="simValAmount">₹--</span></label>
-                <input type="range" id="simAmount" class="range-slider" min="100000" max="10000000" step="50000" value="1000000">
+                <input type="range" id="amountSlider" class="range-slider" min="100000" max="10000000" step="50000" value="1000000">
               </div>
 
               <div class="calc-control">
                 <label>Simulated Tenure (Years) <span id="simValTenure">-- Years</span></label>
-                <input type="range" id="simTenure" class="range-slider" min="1" max="30" step="1" value="10">
+                <input type="range" id="tenureSlider" class="range-slider" min="1" max="30" step="1" value="10">
               </div>
 
-              <button id="runSimBtn" class="primary-btn" style="width: 100%; justify-content: center; margin-top: 10px;">
-                <i class="fa-solid fa-play"></i> Recalculate Scenario
-              </button>
-              
-              <button id="resetSimBtn" class="secondary-btn" style="width: 100%; justify-content: center; margin-top: 10px; display: none;">
-                <i class="fa-solid fa-rotate-left"></i> Reset to Original
+              <button id="recalculateBtn" class="primary-btn" style="width: 100%; justify-content: center; margin-top: 10px;">
+                ▶ Recalculate Scenario
               </button>
 
-              <div id="simResultBox" style="display: none; margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px;">
-                <h4 style="font-size: 13px; color: var(--text-primary); margin-bottom: 8px; border-bottom: 1px solid var(--border-glass); padding-bottom: 4px;">Simulation Results:</h4>
-                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.8;">
-                  <div>New DTI Ratio: <strong id="simResultDti" style="color: var(--accent-gold);">--%</strong></div>
-                  <div id="simResultSummary" style="margin-top: 6px; font-weight: 600; color: var(--text-primary);"></div>
-                  <div style="margin-top: 8px;">
-                    <strong style="color: var(--text-primary); font-size: 11px;">Status Changes:</strong>
-                    <ul id="simResultChanges" style="padding-left: 16px; margin-top: 4px; color: var(--text-secondary);">
-                      <!-- Dynamically populated status changes -->
-                    </ul>
-                  </div>
-                </div>
+              <div id="simulationResults" style="display: none; margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; color: var(--text-secondary); line-height: 1.8;">
               </div>
             </div>
           </div>
