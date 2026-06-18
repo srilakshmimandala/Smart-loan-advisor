@@ -479,6 +479,14 @@ async function loadDashboardData(customerId) {
     document.getElementById("clientMeta").innerText = `Age: ${profile.age} | City: ${profile.city} | Employment: ${profile.employment_type}`;
     document.getElementById("clientCreditScore").innerText = profile.credit_score;
     
+    // Update dashboard title based on loan purpose
+    const purpose = profile.loan_purpose || "Loan";
+    document.title = `Smart Loan Advisor — ${purpose} Dashboard`;
+    const recsTitle = document.getElementById("recommendationsTitle");
+    if (recsTitle) {
+      recsTitle.innerHTML = `Top ${purpose} Recommendations <span>Tailored Matches</span>`;
+    }
+    
     // Update credit score gauge ring rotation
     const scorePct = ((profile.credit_score - 300) / 550) * 100;
     const ring = document.getElementById("scoreRing");

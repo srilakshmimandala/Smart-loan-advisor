@@ -9,6 +9,54 @@ from utils.llm_client import get_raw_gemini_model
 logger = get_logger("RecommendationsRoutes")
 recommendations_bp = Blueprint("recommendations", __name__)
 
+def clean_recommendation_texts(recs, profile):
+    """
+    Replaces any hardcoded income, loan amount, or credit score values in
+    the recommendations text with the customer's actual profile values.
+    """
+    import re
+    
+    income = profile.get("monthly_income", 45000)
+    desired = profile.get("desired_amount", 500000)
+    credit = profile.get("credit_score", 700)
+    
+    income_str = f"{income:,.2f}"
+    income_str_no_dec = f"{income:,.0f}"
+    desired_str = f"{desired:,.2f}"
+    desired_str_no_dec = f"{desired:,.0f}"
+    credit_str = str(credit)
+    
+    def replacer(text):
+        if not isinstance(text, str):
+            return text
+            
+        # 1. Replace income values (45,000, 45000, 45,000.00, etc.)
+        text = re.sub(r'\b45,?000(?:\.00)?\b', income_str_no_dec, text)
+        
+        # 2. Replace loan amount values (7 lakhs, 7 lakh, 7,00,000, 700,000, 700000 etc.)
+        text = re.sub(r'\b7\s*lakhs?\b', f"₹{desired_str_no_dec}", text, flags=re.IGNORECASE)
+        text = re.sub(r'\b7,00,000(?:\.00)?\b', desired_str_no_dec, text)
+        text = re.sub(r'\b700,000(?:\.00)?\b', desired_str_no_dec, text)
+        text = re.sub(r'\b700000\b', str(int(desired)), text)
+        
+        # 3. Replace credit score (700) - but only if it matches credit score context, e.g. "credit score of 700" or "\b700\b"
+        text = re.sub(r'\b700\b(?!,\d| \d|0)', credit_str, text)
+        
+        return text
+
+    if isinstance(recs, list):
+        for rec in recs:
+            if "why_suits" in rec:
+                rec["why_suits"] = replacer(rec["why_suits"])
+            if "advantages" in rec and isinstance(rec["advantages"], list):
+                rec["advantages"] = [replacer(adv) for adv in rec["advantages"]]
+            if "risks" in rec and isinstance(rec["risks"], list):
+                rec["risks"] = [replacer(risk) for risk in rec["risks"]]
+            if "negotiation_tip" in rec:
+                rec["negotiation_tip"] = replacer(rec["negotiation_tip"])
+                
+    return recs
+
 def generate_direct_loan_advisory(profile, customer_id):
     try:
         from groq import Groq
@@ -181,6 +229,12 @@ def generate_direct_loan_advisory(profile, customer_id):
                                 "reasons": []
                             }
                             fallback_notes[p["loan_id"]] = f"Recommendation based on your maximum eligible amount of ₹{max_eligible_amount:,.2f} instead of requested ₹{profile['desired_amount']:,.2f}."
+
+        # Strict filtering: Keep ONLY products that match the requested loan purpose/type
+        eligible_ids = [
+            pid for pid in eligible_ids
+            if any(p["loan_id"] == pid and p["loan_type"] in mapped_types for p in products)
+        ]
 
         dti_ratio = (profile["existing_emis"] / profile["monthly_income"]) * 100 if profile["monthly_income"] > 0 else 100.0
         is_high_risk = dti_ratio > 50.0 or profile["credit_score"] < 600
@@ -407,9 +461,16 @@ def generate_direct_loan_advisory(profile, customer_id):
                 client = Groq(api_key=groq_key)
                 def generate_explanation(loan, customer):
                     try:
+                        prompt = (
+                            f"In 2 sentences explain why {loan['bank_name']} {loan['loan_type']} at {loan['interest_rate']}% "
+                            f"is good for a customer with monthly income of INR {customer['monthly_income']:,.2f}, "
+                            f"desired loan amount of INR {customer['desired_amount']:,.2f}, and credit score of {customer['credit_score']}. "
+                            f"Strictly reference only the customer's actual values (Income: {customer['monthly_income']}, "
+                            f"Amount: {customer['desired_amount']}, Credit Score: {customer['credit_score']}) and do not use any other numbers."
+                        )
                         response = client.chat.completions.create(
                             model="llama-3.1-8b-instant",
-                            messages=[{"role": "user", "content": f"In 2 sentences explain why {loan['bank_name']} {loan['loan_type']} at {loan['interest_rate']}% is good for a customer with income {customer['monthly_income']} and credit score {customer['credit_score']}"}],
+                            messages=[{"role": "user", "content": prompt}],
                             max_tokens=100
                         )
                         return response.choices[0].message.content.strip()
@@ -456,6 +517,9 @@ def generate_direct_loan_advisory(profile, customer_id):
                 "negotiation_tip": f"Request processing fee waiver based on credit score of {profile['credit_score']}."
             })
             
+        # Clean recommendation texts before returning
+        recommendation_list = clean_recommendation_texts(recommendation_list, profile)
+        
         recommendation_results = {
             "recommendations": recommendation_list
         }
