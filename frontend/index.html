@@ -148,40 +148,38 @@
             </div>
           </div>
 
-          <!-- Kanban Application Board -->
+          <!-- Application Checklist Section -->
           <div class="dashboard-section">
-            <div class="section-title">
-              <h3>Application Status Tracker <span>Interactive Kanban Board</span></h3>
-            </div>
-            <div class="kanban-board">
-              <!-- Applied Lane -->
-              <div class="kanban-column" data-status="Applied" id="kanban-Applied">
-                <h4>Applied</h4>
-                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
-                  <!-- Dynamically populated applied cards -->
+            <div class="glass-panel dashboard-widget" style="padding: 24px;">
+              <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-list-check" style="color: var(--accent-gold);"></i> Application Checklist
+              </h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;">
+                Keep track of the necessary documentation for your application.
+              </p>
+              
+              <div id="checklistContainer">
+                <h4 id="checklistLoanTypeHeader" style="font-size: 14px; color: var(--text-primary); margin-bottom: 12px; font-weight: 600;">Documents Required for Loan</h4>
+                
+                <div id="checklistItemsList" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; max-height: 350px; overflow-y: auto; padding-right: 8px;">
+                  <!-- Checkbox items dynamically populated -->
+                </div>
+                
+                <!-- Progress Bar -->
+                <div style="margin-top: 15px; margin-bottom: 10px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">
+                    <span>Document Gathering Progress</span>
+                    <span id="checklistProgressText">0 of 0 documents ready</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                    <div id="checklistProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00f2fe, #8b5cf6); transition: width 0.3s ease;"></div>
+                  </div>
                 </div>
               </div>
-              <!-- Under Review Lane -->
-              <div class="kanban-column" data-status="Under Review" id="kanban-Under Review">
-                <h4>Under Review</h4>
-                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
-                  <!-- Dynamically populated under review cards -->
-                </div>
-              </div>
-              <!-- Approved Lane -->
-              <div class="kanban-column" data-status="Approved" id="kanban-Approved">
-                <h4>Approved</h4>
-                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
-                  <!-- Dynamically populated approved cards -->
-                </div>
-              </div>
-              <!-- Rejected Lane -->
-              <div class="kanban-column" data-status="Rejected" id="kanban-Rejected">
-                <h4>Rejected</h4>
-                <div class="kanban-cards-container" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
-                  <!-- Dynamically populated rejected cards -->
-                </div>
-              </div>
+              
+              <p style="font-size: 11px; color: var(--text-secondary); font-style: italic; margin-top: 15px; border-top: 1px solid var(--border-glass); padding-top: 10px; line-height: 1.4;">
+                Note: Requirements may vary slightly by bank. Confirm with your chosen bank before applying.
+              </p>
             </div>
           </div>
 

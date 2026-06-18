@@ -537,8 +537,8 @@ async function loadDashboardData(customerId) {
       `;
     }
 
-    // 3. Setup Kanban board
-    loadKanbanBoard(customerId);
+    // 3. Setup Application Checklist
+    loadApplicationChecklist(profile);
     
     // 4. Setup calculators & simulators
     initInteractiveCalculator(profile);
@@ -723,6 +723,7 @@ function toggleDetailsPanel(btn) {
 }
 
 // Kanban Status updates
+// Document Checklist Logic
 async function applyForLoan(customerId, loanId, bankName, loanType) {
   const bankUrls = {
     "SBI": "https://sbi.co.in",
@@ -753,139 +754,177 @@ async function applyForLoan(customerId, loanId, bankName, loanType) {
     });
     
     if (res.ok) {
-      alert(`Application sent! Mock application for ${bankName} has been tracked to 'Applied' column and the official page has been opened.`);
-      loadKanbanBoard(customerId);
+      alert(`Application initiated! The official application page for ${bankName} has been opened.`);
     } else {
-      alert("Failed to submit loan application tracker.");
+      console.warn("Failed to update application tracker in backend.");
     }
   } catch (error) {
     console.error("Error applying for loan:", error);
   }
 }
 
-async function loadKanbanBoard(customerId) {
-  try {
-    const res = await fetch(`${BASE_URL}/api/loans/tracker/${customerId}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
+function loadApplicationChecklist(profile) {
+  const header = document.getElementById("checklistLoanTypeHeader");
+  const listContainer = document.getElementById("checklistItemsList");
+  const progressText = document.getElementById("checklistProgressText");
+  const progressBar = document.getElementById("checklistProgressBar");
+  
+  if (!listContainer || !header) return;
+  
+  listContainer.innerHTML = '';
+  
+  const purpose = (profile.loan_purpose || "").toLowerCase();
+  
+  // Document lists per loan purpose
+  const checklists = {
+    "personal loan": {
+      title: "Documents Required for Personal Loan",
+      items: [
+        "Aadhaar Card / Passport / Voter ID (Identity Proof)",
+        "PAN Card",
+        "Last 3 months salary slips",
+        "Last 6 months bank statements",
+        "Latest Form 16 or ITR",
+        "Office ID / Employment letter"
+      ]
+    },
+    "home loan": {
+      title: "Documents Required for Home Loan",
+      items: [
+        "Aadhaar Card / Passport (Identity Proof)",
+        "PAN Card",
+        "Last 6 months salary slips",
+        "Last 12 months bank statements",
+        "Property documents (sale deed, NOC from builder)",
+        "Latest Form 16 or ITR (last 2 years)",
+        "Property valuation report"
+      ]
+    },
+    "car loan": {
+      title: "Documents Required for Car Loan",
+      items: [
+        "Aadhaar Card / Driving License (Identity Proof)",
+        "PAN Card",
+        "Last 3 months salary slips",
+        "Last 6 months bank statements",
+        "Vehicle proforma invoice from dealer",
+        "Latest Form 16"
+      ]
+    },
+    "vehicle loan": {
+      title: "Documents Required for Vehicle Loan",
+      items: [
+        "Aadhaar Card / Driving License (Identity Proof)",
+        "PAN Card",
+        "Last 3 months salary slips",
+        "Last 6 months bank statements",
+        "Vehicle proforma invoice from dealer",
+        "Latest Form 16"
+      ]
+    },
+    "education loan": {
+      title: "Documents Required for Education Loan",
+      items: [
+        "Aadhaar Card / Passport (Identity Proof)",
+        "PAN Card",
+        "Admission letter from institution",
+        "Fee structure / cost of education document",
+        "Last 3 months salary slips of co-applicant (parent/guardian)",
+        "Last 6 months bank statements of co-applicant",
+        "Academic marksheets (10th, 12th, graduation if applicable)"
+      ]
+    },
+    "gold loan": {
+      title: "Documents Required for Gold Loan",
+      items: [
+        "Aadhaar Card (Identity Proof)",
+        "PAN Card",
+        "Gold ornaments for physical verification",
+        "Proof of ownership of gold (if available)",
+        "Address proof"
+      ]
+    },
+    "business loan": {
+      title: "Documents Required for Business Loan",
+      items: [
+        "Aadhaar Card / Passport (Identity Proof)",
+        "PAN Card",
+        "Business registration certificate",
+        "Last 2 years ITR with P&L and balance sheet",
+        "Last 12 months bank statements",
+        "GST registration certificate",
+        "Business address proof"
+      ]
+    }
+  };
+  
+  // Find matching purpose or default to personal loan
+  let activeChecklist = checklists[purpose];
+  if (!activeChecklist) {
+    // Attempt fuzzy matching
+    if (purpose.includes("car")) {
+      activeChecklist = checklists["car loan"];
+    } else if (purpose.includes("vehicle")) {
+      activeChecklist = checklists["vehicle loan"];
+    } else if (purpose.includes("home")) {
+      activeChecklist = checklists["home loan"];
+    } else if (purpose.includes("education")) {
+      activeChecklist = checklists["education loan"];
+    } else if (purpose.includes("gold")) {
+      activeChecklist = checklists["gold loan"];
+    } else if (purpose.includes("business")) {
+      activeChecklist = checklists["business loan"];
+    } else {
+      activeChecklist = checklists["personal loan"];
+    }
+  }
+  
+  header.innerText = activeChecklist.title;
+  
+  const total = activeChecklist.items.length;
+  let checkedCount = 0;
+  
+  function updateProgress() {
+    progressText.innerText = `${checkedCount} of ${total} documents ready`;
+    const percentage = total > 0 ? (checkedCount / total) * 100 : 0;
+    progressBar.style.width = `${percentage}%`;
+  }
+  
+  activeChecklist.items.forEach((item, index) => {
+    const wrapper = document.createElement("label");
+    wrapper.style.cssText = "display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-secondary); line-height: 1.4; user-select: none;";
     
-    const apps = data.applications || [];
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.cssText = "margin-top: 3px; cursor: pointer; accent-color: #00f2fe;";
     
-    // Clear all lanes
-    const columns = ["Applied", "Under Review", "Approved", "Rejected"];
-    columns.forEach(col => {
-      const container = document.querySelector(`#kanban-${col.replace(/ /g, '\\ ')} .kanban-cards-container`);
-      if (container) container.innerHTML = '';
-    });
-    
-    if (apps.length === 0) {
-      // Put placeholder in Applied
-      const container = document.querySelector(`#kanban-Applied .kanban-cards-container`);
-      if (container) {
-        container.innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 20px; border: 1px dashed var(--border-glass); border-radius: 8px;">
-            No active applications. Select a recommendation and click 'Apply'.
-          </div>
-        `;
-      }
-      return;
+    // Save/Load checked states in localStorage per customer to persist checks!
+    const storageKey = `checklist_${profile.id || 1}_${index}`;
+    if (localStorage.getItem(storageKey) === "true") {
+      checkbox.checked = true;
+      checkedCount++;
     }
     
-    apps.forEach(app => {
-      const colId = `kanban-${app.status}`;
-      const container = document.getElementById(colId)?.querySelector(".kanban-cards-container");
-      if (!container) return;
-      
-      const card = document.createElement("div");
-      card.className = "kanban-card";
-      card.setAttribute("draggable", "true");
-      
-      // Setup drag events
-      card.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/plain", JSON.stringify({
-          customerId: customerId,
-          loanId: app.loan_id,
-          bankName: app.bank_name,
-          loanType: app.loan_type
-        }));
-      });
-      
-      // Status transition choices
-      let nextStatus = '';
-      let btnLabel = '';
-      if (app.status === 'Applied') {
-        nextStatus = 'Under Review';
-        btnLabel = 'Review';
-      } else if (app.status === 'Under Review') {
-        nextStatus = 'Approved';
-        btnLabel = 'Approve';
-      } else if (app.status === 'Approved') {
-        nextStatus = 'Rejected';
-        btnLabel = 'Reject';
-      } else if (app.status === 'Rejected') {
-        nextStatus = 'Applied';
-        btnLabel = 'Re-apply';
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        checkedCount++;
+        localStorage.setItem(storageKey, "true");
+      } else {
+        checkedCount--;
+        localStorage.setItem(storageKey, "false");
       }
-      
-      const emojiSpan = getLoanEmoji(app.loan_type, true);
-      const typeLabel = emojiSpan ? `${emojiSpan}${app.loan_type}` : app.loan_type;
-
-      card.innerHTML = `
-        <h5>${app.bank_name}</h5>
-        <p>${typeLabel}</p>
-        <div class="kanban-actions">
-          <button class="kanban-btn" onclick="updateAppStatus(${customerId}, '${app.loan_id}', '${app.bank_name}', '${app.loan_type}', '${nextStatus}')">
-            ${btnLabel} <i class="fa-solid fa-arrow-right"></i>
-          </button>
-        </div>
-      `;
-      container.appendChild(card);
+      updateProgress();
     });
     
-    // Set up drop zones on lanes
-    columns.forEach(col => {
-      const column = document.getElementById(`kanban-${col}`);
-      if (!column) return;
-      
-      column.addEventListener("dragover", (e) => {
-        e.preventDefault();
-      });
-      
-      column.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        try {
-          const dragData = JSON.parse(e.dataTransfer.getData("text/plain"));
-          await updateAppStatus(dragData.customerId, dragData.loanId, dragData.bankName, dragData.loanType, col);
-        } catch (err) {
-          console.error("Drop error:", err);
-        }
-      });
-    });
+    const labelText = document.createElement("span");
+    labelText.innerText = item;
     
-  } catch (error) {
-    console.error("Kanban failed:", error);
-  }
-}
-
-async function updateAppStatus(customerId, loanId, bankName, loanType, newStatus) {
-  try {
-    const res = await fetch(`${BASE_URL}/api/loans/apply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_id: customerId,
-        loan_id: loanId,
-        bank_name: bankName,
-        loan_type: loanType,
-        status: newStatus
-      })
-    });
-    if (res.ok) {
-      loadKanbanBoard(customerId);
-    }
-  } catch (error) {
-    console.error("Failed to update status:", error);
-  }
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(labelText);
+    listContainer.appendChild(wrapper);
+  });
+  
+  updateProgress();
 }
 
 // Chart.js Visualizer

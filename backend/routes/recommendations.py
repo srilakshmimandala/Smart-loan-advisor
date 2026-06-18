@@ -1,3 +1,4 @@
+# Kanban Application Status Tracker removed in favor of Application Checklist.
 import os
 import json
 from flask import Blueprint, request, jsonify, send_file
