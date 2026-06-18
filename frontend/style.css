@@ -29,19 +29,16 @@
   padding: 0;
 }
 
-@keyframes gradientShift {
+@keyframes gradientBG {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
 body {
-  background: linear-gradient(
-    135deg, 
-    #050510, #0a0a20, #050518, #0d0d25
-  );
+  background: linear-gradient(-45deg, #03001e, #160533, #051026, #002930, #2b061e);
   background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
+  animation: gradientBG 15s ease infinite;
   color: var(--text-primary);
   font-family: var(--font-body);
   min-height: 100vh;
@@ -87,13 +84,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 255, 255, 0.12);
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
   border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
+  box-shadow: var(--shadow-premium);
+  transition: var(--transition-smooth);
 }
 
 @keyframes cardFadeIn {
@@ -107,16 +104,18 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-.glass-panel, .rec-card, .eligibility-card, .timeline-item {
+.glass-panel, .rec-card, .eligibility-card, .timeline-item, .kanban-card {
   animation: cardFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  transition: all 0.3s ease;
-  padding: 28px;
+  transition: var(--transition-smooth);
 }
 
-.glass-panel:hover, .rec-card:hover, .eligibility-card:hover, .timeline-item:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1) !important;
-  border-color: rgba(0, 255, 255, 0.35) !important;
+.glass-panel:hover, .rec-card:hover, .eligibility-card:hover, .kanban-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 20px 45px -10px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(0, 242, 254, 0.18),
+    0 0 50px rgba(139, 92, 246, 0.12);
+  border-color: rgba(0, 242, 254, 0.45);
 }
 
 /* Header styling */
@@ -397,27 +396,17 @@ header {
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 24px;
-}
-
-.grid-left-col {
-  border-right: 1px solid rgba(0, 255, 255, 0.12);
-  padding-right: 24px;
+  gap: 30px;
 }
 
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  .grid-left-col {
-    border-right: none;
-    padding-right: 0;
   }
 }
 
 .dashboard-section {
-  margin-bottom: 24px;
+  margin-bottom: 40px;
 }
 
 .section-title {
@@ -426,31 +415,8 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-left: none;
-  padding-left: 0;
-}
-
-.section-title h3, 
-.calc-widget h3, 
-.dashboard-widget h3 {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  border-left: 3px solid #00ffff !important;
-  padding-left: 12px !important;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.section-title span, 
-.calc-widget p, 
-.dashboard-widget p {
-  color: rgba(255, 255, 255, 0.5) !important;
-  font-size: 12px;
-  font-weight: 400;
+  border-left: 4px solid var(--accent-gold);
+  padding-left: 12px;
 }
 
 .section-title span {
@@ -500,46 +466,21 @@ header {
 
 /* Eligibility Badges Panel */
 .eligibility-panel {
-/* Eligibility Badges Panel */
-.eligibility-panel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-@media (max-width: 600px) {
-  .eligibility-panel {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
 }
 
 .eligibility-card {
-  padding: 28px;
+  padding: 16px;
   text-align: center;
-  border-radius: 16px;
-  transition: all 0.3s ease;
 }
 
-.eligibility-card.eligible {
-  border: 1px solid rgba(0, 255, 136, 0.3) !important;
-  background: rgba(0, 255, 136, 0.08) !important;
-  animation: pulse-glow 2.5s ease-in-out infinite;
-}
-
-.eligibility-card.conditional {
-  border: 1px solid rgba(255, 170, 0, 0.3) !important;
-  background: rgba(255, 170, 0, 0.08) !important;
-}
-
-.eligibility-card.rejected {
-  border: 1px solid rgba(255, 68, 68, 0.3) !important;
-  background: rgba(255, 68, 68, 0.08) !important;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(0,255,136,0.3); }
-  50% { box-shadow: 0 0 20px rgba(0,255,136,0.6); }
+.eligibility-card h4 {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
 }
 
 .badge {
@@ -553,21 +494,21 @@ header {
 }
 
 .badge.eligible {
-  background: rgba(0, 255, 136, 0.15);
-  color: #00ff88;
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-eligible);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badge.conditional {
-  background: rgba(255, 170, 0, 0.15);
-  color: #ffaa00;
-  border: 1px solid rgba(255, 170, 0, 0.3);
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-conditional);
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .badge.rejected {
-  background: rgba(255, 68, 68, 0.15);
-  color: #ff4444;
-  border: 1px solid rgba(255, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-rejected);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* Recommendations cards layout */
@@ -578,39 +519,13 @@ header {
 }
 
 .rec-card {
+  padding: 24px;
   position: relative;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(0, 255, 255, 0.12) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  padding: 28px !important;
   overflow: hidden;
-  transition: all 0.3s ease;
 }
 
-.rec-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 100%;
-  background: linear-gradient(to bottom, #00ffff, #7b2ff7);
-  z-index: 2;
-}
-
-.rank-badge {
-  background: linear-gradient(135deg, #00c9ff, #7b2ff7);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 11px;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 10px rgba(0, 242, 254, 0.2);
+.rec-card.rank-1 {
+  border-left: 4px solid var(--accent-gold);
 }
 
 .rec-card-header {
@@ -649,54 +564,35 @@ header {
 .rec-key-details {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin: 20px 0;
-  padding: 20px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-glass);
 }
 
 .detail-item p {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  color: var(--text-secondary);
 }
 
 .detail-item h4 {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 600;
-}
-
-.detail-item:first-child h4 {
-  font-size: 28px !important;
-  color: #00ffff !important;
-  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent-gold);
 }
 
 .rec-expandable-btn {
-  display: block;
-  width: 100%;
-  padding: 10px 20px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  color: var(--accent-gold);
+  cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   outline: none;
-}
-
-.rec-expandable-btn:hover {
-  border-color: #00ffff !important;
-  background: rgba(0, 255, 255, 0.05);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
 }
 
 .rec-details-panel {
@@ -769,52 +665,26 @@ header {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  background: transparent;
-  outline: none;
-}
-
-.range-slider::-webkit-slider-runnable-track {
-  width: 100%;
   height: 6px;
-  background: rgba(0, 255, 255, 0.2) !important;
   border-radius: 3px;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  transition: background 450ms ease-in;
 }
 
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 18px;
-  width: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #00ffff !important;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+  background: var(--accent-gold);
   cursor: pointer;
-  margin-top: -6px; /* center thumb on track */
   transition: transform 0.1s ease;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-}
-
-.range-slider::-moz-range-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(0, 255, 255, 0.2) !important;
-  border-radius: 3px;
-  border: none;
-}
-
-.range-slider::-moz-range-thumb {
-  height: 18px;
-  width: 18px;
-  border-radius: 50%;
-  background: #00ffff !important;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
-  cursor: pointer;
-  border: none;
-  transition: transform 0.1s ease;
 }
 
 .calc-result-box {
@@ -907,7 +777,84 @@ header {
   font-weight: 600;
 }
 
+/* Kanban Board Styling */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
 
+@media (max-width: 900px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kanban-column {
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kanban-column h4 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 8px;
+}
+
+.kanban-card {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  cursor: grab;
+  transition: var(--transition-smooth);
+}
+
+/* Inherits global card hover effects */
+
+.kanban-card h5 {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.kanban-card p {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.kanban-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.kanban-btn {
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.kanban-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
+}
 
 /* History lists */
 .history-list {
@@ -1079,85 +1026,4 @@ header {
     padding: 8px 16px;
     font-size: 12px;
   }
-}
-
-/* Scrollbar Customization */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #050510;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.3);
-  border-radius: 3px;
-}
-
-/* Recalculate Scenario Button */
-#recalculateBtn {
-  width: 100%;
-  background: linear-gradient(135deg, #00c9ff, #7b2ff7) !important;
-  color: #ffffff !important;
-  border: none !important;
-  border-radius: 10px !important;
-  padding: 12px 20px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(0, 201, 255, 0.2);
-}
-
-#recalculateBtn:hover {
-  filter: brightness(1.15);
-  transform: scale(1.02);
-}
-
-/* Staggered page load animations */
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-#customerProfileCard {
-  animation: slideInLeft 0.4s ease 0.1s both;
-}
-
-#eligibilitySection {
-  animation: slideInUp 0.4s ease 0.2s both;
-}
-
-#recommendationsSection {
-  animation: slideInUp 0.4s ease 0.3s both;
-}
-
-#chartsSection {
-  animation: slideInUp 0.4s ease 0.4s both;
-}
-
-#emiCalculatorSection {
-  animation: slideInLeft 0.4s ease 0.5s both;
-}
-
-#whatIfSimulatorSection {
-  animation: slideInLeft 0.4s ease 0.6s both;
-}
-
-#improvementAdvisorSection {
-  animation: slideInLeft 0.4s ease 0.7s both;
-}
-
-#sessionHistorySection {
-  animation: slideInLeft 0.4s ease 0.8s both;
 }

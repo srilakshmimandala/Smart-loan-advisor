@@ -537,7 +537,7 @@ async function loadDashboardData(customerId) {
       `;
     }
 
-    // 3. Setup Interactive Elements
+
     
     // 4. Setup calculators & simulators
     initInteractiveCalculator(profile);
@@ -557,12 +557,13 @@ async function loadDashboardData(customerId) {
 function updateEligibilityBadges(eligibilityData) {
   const grid = document.getElementById("eligibilityGrid");
   if (!grid) return;
+  
   grid.innerHTML = '';
   
   const displayCategories = [
     { label: '<span class="loan-emoji">🏠</span>Home Loan', dbKeys: ["Home Loan", "Home"] },
     { label: '<span class="loan-emoji">💰</span>Personal Loan', dbKeys: ["Personal Loan", "Personal"] },
-    { label: '<span class="loan-emoji">🚗</span>Car Loan', dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle", "Auto Loan", "Auto"] },
+    { label: '<span class="loan-emoji">🚗</span>Auto Loan', dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
     { label: '<span class="loan-emoji">🎓</span>Education Loan', dbKeys: ["Education Loan", "Education"] }
   ];
   
@@ -570,6 +571,7 @@ function updateEligibilityBadges(eligibilityData) {
   
   displayCategories.forEach(cat => {
     const card = document.createElement("div");
+    card.className = "eligibility-card glass-panel";
     
     let status = "Not Eligible";
     let statusClass = "rejected";
@@ -599,16 +601,8 @@ function updateEligibilityBadges(eligibilityData) {
       }
     }
     
-    card.className = `eligibility-card glass-panel ${statusClass}`;
-    
-    // Extract emoji and text to place emoji at top
-    const emojiMatch = cat.label.match(/<span[^>]*>(.*?)<\/span>/);
-    const emoji = emojiMatch ? emojiMatch[1] : "ℹ️";
-    const textName = cat.label.replace(/<span[^>]*>.*?<\/span>/, "").trim();
-    
     card.innerHTML = `
-      <div class="eligibility-emoji" style="font-size: 32px; margin-bottom: 12px;">${emoji}</div>
-      <h4 style="margin-bottom: 12px; color: var(--text-primary); font-weight: 600;">${textName}</h4>
+      <h4>${cat.label}</h4>
       <span class="badge ${statusClass}">${status}</span>
     `;
     grid.appendChild(card);
@@ -652,18 +646,13 @@ function updateRecommendationCards(recsObj, comparisonsList, customerId) {
     const typeLabel = emojiSpan ? `${emojiSpan}${rec.loan_type}` : rec.loan_type;
 
     card.innerHTML = `
-      <div class="rec-card-header" style="position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <div class="rec-card-header">
         <div class="rec-bank">
-          <h3 style="font-size: 20px; font-weight: 700; color: #ffffff; margin: 0;">${rec.bank_name}</h3>
-          <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">${typeLabel}</p>
+          <h3>${rec.bank_name}</h3>
+          <p>${typeLabel} — Rank #${rec.rank}</p>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <div class="suitability-badge">
-            Match ${rec.suitability_score}%
-          </div>
-          <div class="rank-badge">
-            Rank #${rec.rank}
-          </div>
+        <div class="suitability-badge">
+          Match ${rec.suitability_score}%
         </div>
       </div>
       
@@ -733,7 +722,6 @@ function toggleDetailsPanel(btn) {
 }
 
 // Kanban Status updates
-// Document Checklist Logic
 async function applyForLoan(customerId, loanId, bankName, loanType) {
   const bankUrls = {
     "SBI": "https://sbi.co.in",
@@ -773,7 +761,7 @@ async function applyForLoan(customerId, loanId, bankName, loanType) {
   }
 }
 
-// Detailed Advisory toggle helper
+
 
 // Chart.js Visualizer
 function renderCharts(comparisons) {
