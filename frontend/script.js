@@ -537,8 +537,7 @@ async function loadDashboardData(customerId) {
       `;
     }
 
-    // 3. Setup Application Checklist
-    loadApplicationChecklist(profile);
+    // 3. Setup Interactive Elements
     
     // 4. Setup calculators & simulators
     initInteractiveCalculator(profile);
@@ -558,13 +557,12 @@ async function loadDashboardData(customerId) {
 function updateEligibilityBadges(eligibilityData) {
   const grid = document.getElementById("eligibilityGrid");
   if (!grid) return;
-  
   grid.innerHTML = '';
   
   const displayCategories = [
     { label: '<span class="loan-emoji">🏠</span>Home Loan', dbKeys: ["Home Loan", "Home"] },
     { label: '<span class="loan-emoji">💰</span>Personal Loan', dbKeys: ["Personal Loan", "Personal"] },
-    { label: '<span class="loan-emoji">🚗</span>Auto Loan', dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle"] },
+    { label: '<span class="loan-emoji">🚗</span>Car Loan', dbKeys: ["Car Loan", "Vehicle Loan", "Vehicle", "Auto Loan", "Auto"] },
     { label: '<span class="loan-emoji">🎓</span>Education Loan', dbKeys: ["Education Loan", "Education"] }
   ];
   
@@ -572,7 +570,6 @@ function updateEligibilityBadges(eligibilityData) {
   
   displayCategories.forEach(cat => {
     const card = document.createElement("div");
-    card.className = "eligibility-card glass-panel";
     
     let status = "Not Eligible";
     let statusClass = "rejected";
@@ -602,8 +599,16 @@ function updateEligibilityBadges(eligibilityData) {
       }
     }
     
+    card.className = `eligibility-card glass-panel ${statusClass}`;
+    
+    // Extract emoji and text to place emoji at top
+    const emojiMatch = cat.label.match(/<span[^>]*>(.*?)<\/span>/);
+    const emoji = emojiMatch ? emojiMatch[1] : "ℹ️";
+    const textName = cat.label.replace(/<span[^>]*>.*?<\/span>/, "").trim();
+    
     card.innerHTML = `
-      <h4>${cat.label}</h4>
+      <div class="eligibility-emoji" style="font-size: 32px; margin-bottom: 12px;">${emoji}</div>
+      <h4 style="margin-bottom: 12px; color: var(--text-primary); font-weight: 600;">${textName}</h4>
       <span class="badge ${statusClass}">${status}</span>
     `;
     grid.appendChild(card);
@@ -647,13 +652,18 @@ function updateRecommendationCards(recsObj, comparisonsList, customerId) {
     const typeLabel = emojiSpan ? `${emojiSpan}${rec.loan_type}` : rec.loan_type;
 
     card.innerHTML = `
-      <div class="rec-card-header">
+      <div class="rec-card-header" style="position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
         <div class="rec-bank">
-          <h3>${rec.bank_name}</h3>
-          <p>${typeLabel} — Rank #${rec.rank}</p>
+          <h3 style="font-size: 20px; font-weight: 700; color: #ffffff; margin: 0;">${rec.bank_name}</h3>
+          <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">${typeLabel}</p>
         </div>
-        <div class="suitability-badge">
-          Match ${rec.suitability_score}%
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="suitability-badge">
+            Match ${rec.suitability_score}%
+          </div>
+          <div class="rank-badge">
+            Rank #${rec.rank}
+          </div>
         </div>
       </div>
       
@@ -763,169 +773,7 @@ async function applyForLoan(customerId, loanId, bankName, loanType) {
   }
 }
 
-function loadApplicationChecklist(profile) {
-  const header = document.getElementById("checklistLoanTypeHeader");
-  const listContainer = document.getElementById("checklistItemsList");
-  const progressText = document.getElementById("checklistProgressText");
-  const progressBar = document.getElementById("checklistProgressBar");
-  
-  if (!listContainer || !header) return;
-  
-  listContainer.innerHTML = '';
-  
-  const purpose = (profile.loan_purpose || "").toLowerCase();
-  
-  // Document lists per loan purpose
-  const checklists = {
-    "personal loan": {
-      title: "Documents Required for Personal Loan",
-      items: [
-        "Aadhaar Card / Passport / Voter ID (Identity Proof)",
-        "PAN Card",
-        "Last 3 months salary slips",
-        "Last 6 months bank statements",
-        "Latest Form 16 or ITR",
-        "Office ID / Employment letter"
-      ]
-    },
-    "home loan": {
-      title: "Documents Required for Home Loan",
-      items: [
-        "Aadhaar Card / Passport (Identity Proof)",
-        "PAN Card",
-        "Last 6 months salary slips",
-        "Last 12 months bank statements",
-        "Property documents (sale deed, NOC from builder)",
-        "Latest Form 16 or ITR (last 2 years)",
-        "Property valuation report"
-      ]
-    },
-    "car loan": {
-      title: "Documents Required for Car Loan",
-      items: [
-        "Aadhaar Card / Driving License (Identity Proof)",
-        "PAN Card",
-        "Last 3 months salary slips",
-        "Last 6 months bank statements",
-        "Vehicle proforma invoice from dealer",
-        "Latest Form 16"
-      ]
-    },
-    "vehicle loan": {
-      title: "Documents Required for Vehicle Loan",
-      items: [
-        "Aadhaar Card / Driving License (Identity Proof)",
-        "PAN Card",
-        "Last 3 months salary slips",
-        "Last 6 months bank statements",
-        "Vehicle proforma invoice from dealer",
-        "Latest Form 16"
-      ]
-    },
-    "education loan": {
-      title: "Documents Required for Education Loan",
-      items: [
-        "Aadhaar Card / Passport (Identity Proof)",
-        "PAN Card",
-        "Admission letter from institution",
-        "Fee structure / cost of education document",
-        "Last 3 months salary slips of co-applicant (parent/guardian)",
-        "Last 6 months bank statements of co-applicant",
-        "Academic marksheets (10th, 12th, graduation if applicable)"
-      ]
-    },
-    "gold loan": {
-      title: "Documents Required for Gold Loan",
-      items: [
-        "Aadhaar Card (Identity Proof)",
-        "PAN Card",
-        "Gold ornaments for physical verification",
-        "Proof of ownership of gold (if available)",
-        "Address proof"
-      ]
-    },
-    "business loan": {
-      title: "Documents Required for Business Loan",
-      items: [
-        "Aadhaar Card / Passport (Identity Proof)",
-        "PAN Card",
-        "Business registration certificate",
-        "Last 2 years ITR with P&L and balance sheet",
-        "Last 12 months bank statements",
-        "GST registration certificate",
-        "Business address proof"
-      ]
-    }
-  };
-  
-  // Find matching purpose or default to personal loan
-  let activeChecklist = checklists[purpose];
-  if (!activeChecklist) {
-    // Attempt fuzzy matching
-    if (purpose.includes("car")) {
-      activeChecklist = checklists["car loan"];
-    } else if (purpose.includes("vehicle")) {
-      activeChecklist = checklists["vehicle loan"];
-    } else if (purpose.includes("home")) {
-      activeChecklist = checklists["home loan"];
-    } else if (purpose.includes("education")) {
-      activeChecklist = checklists["education loan"];
-    } else if (purpose.includes("gold")) {
-      activeChecklist = checklists["gold loan"];
-    } else if (purpose.includes("business")) {
-      activeChecklist = checklists["business loan"];
-    } else {
-      activeChecklist = checklists["personal loan"];
-    }
-  }
-  
-  header.innerText = activeChecklist.title;
-  
-  const total = activeChecklist.items.length;
-  let checkedCount = 0;
-  
-  function updateProgress() {
-    progressText.innerText = `${checkedCount} of ${total} documents ready`;
-    const percentage = total > 0 ? (checkedCount / total) * 100 : 0;
-    progressBar.style.width = `${percentage}%`;
-  }
-  
-  activeChecklist.items.forEach((item, index) => {
-    const wrapper = document.createElement("label");
-    wrapper.style.cssText = "display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-secondary); line-height: 1.4; user-select: none;";
-    
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.style.cssText = "margin-top: 3px; cursor: pointer; accent-color: #00f2fe;";
-    
-    // Save/Load checked states in localStorage per customer to persist checks!
-    const storageKey = `checklist_${profile.id || 1}_${index}`;
-    if (localStorage.getItem(storageKey) === "true") {
-      checkbox.checked = true;
-      checkedCount++;
-    }
-    
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) {
-        checkedCount++;
-        localStorage.setItem(storageKey, "true");
-      } else {
-        checkedCount--;
-        localStorage.setItem(storageKey, "false");
-      }
-      updateProgress();
-    });
-    
-    const labelText = document.createElement("span");
-    labelText.innerText = item;
-    
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(labelText);
-    listContainer.appendChild(wrapper);
-  });
-  
-  updateProgress();
-}
+// Detailed Advisory toggle helper
 
 // Chart.js Visualizer
 function renderCharts(comparisons) {

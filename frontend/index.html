@@ -53,7 +53,7 @@
     <div id="dashboardContent" style="display: none;">
       
       <!-- Profile Header Summary -->
-      <div class="profile-summary-header glass-panel">
+      <div class="profile-summary-header glass-panel" id="customerProfileCard">
         <div class="profile-meta">
           <p>CUSTOMER PROFILE</p>
           <h2 id="clientName">Loading Customer...</h2>
@@ -74,7 +74,7 @@
       </div>
 
       <!-- Eligibility Panel -->
-      <div class="dashboard-section">
+      <div class="dashboard-section" id="eligibilitySection">
         <div class="section-title">
           <h3>Loan Eligibility Status <span id="simulatedLabel" style="color: #fbbf24; font-size: 14px; font-weight: bold; margin-left: 8px; display: none;">[Simulated]</span> <span>Policy Rule Checks</span></h3>
         </div>
@@ -106,7 +106,7 @@
         <div class="grid-left-col">
           
           <!-- Recommendation Cards -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="recommendationsSection">
             <div class="section-title">
               <h3 id="recommendationsTitle">Top Loan Recommendations <span>Tailored Matches</span></h3>
               <button id="downloadReportBtn" class="secondary-btn" style="padding: 6px 16px; font-size: 13px; border-radius: 6px;">
@@ -124,7 +124,7 @@
           </div>
 
           <!-- Cost Comparison Charts -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="chartsSection">
             <div class="section-title">
               <h3>Financial Cost Comparison <span>Side-by-Side Analysis</span></h3>
             </div>
@@ -148,48 +148,13 @@
             </div>
           </div>
 
-          <!-- Application Checklist Section -->
-          <div class="dashboard-section">
-            <div class="glass-panel dashboard-widget" style="padding: 24px;">
-              <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-list-check" style="color: var(--accent-gold);"></i> Application Checklist
-              </h3>
-              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;">
-                Keep track of the necessary documentation for your application.
-              </p>
-              
-              <div id="checklistContainer">
-                <h4 id="checklistLoanTypeHeader" style="font-size: 14px; color: var(--text-primary); margin-bottom: 12px; font-weight: 600;">Documents Required for Loan</h4>
-                
-                <div id="checklistItemsList" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; max-height: 350px; overflow-y: auto; padding-right: 8px;">
-                  <!-- Checkbox items dynamically populated -->
-                </div>
-                
-                <!-- Progress Bar -->
-                <div style="margin-top: 15px; margin-bottom: 10px; padding-top: 15px; border-top: 1px solid var(--border-glass);">
-                  <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">
-                    <span>Document Gathering Progress</span>
-                    <span id="checklistProgressText">0 of 0 documents ready</span>
-                  </div>
-                  <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-                    <div id="checklistProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00f2fe, #8b5cf6); transition: width 0.3s ease;"></div>
-                  </div>
-                </div>
-              </div>
-              
-              <p style="font-size: 11px; color: var(--text-secondary); font-style: italic; margin-top: 15px; border-top: 1px solid var(--border-glass); padding-top: 10px; line-height: 1.4;">
-                Note: Requirements may vary slightly by bank. Confirm with your chosen bank before applying.
-              </p>
-            </div>
-          </div>
-
         </div>
 
         <!-- Right Column: Interactive Widgets, Simulator & Improvement Plan -->
         <div class="grid-right-col">
           
           <!-- Interactive EMI Calculator Widget -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="emiCalculatorSection">
             <div class="glass-panel calc-widget">
               <h3 style="font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-calculator" style="color: var(--accent-gold);"></i> EMI & DTI Estimator
@@ -222,7 +187,7 @@
           </div>
 
           <!-- What-If Scenario Simulator -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="whatIfSimulatorSection">
             <div class="glass-panel dashboard-widget">
               <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-gold);"></i> "What If" Simulator
@@ -256,7 +221,7 @@
           </div>
 
           <!-- Loan Improvement Advisor (3-Month Action Plan) -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="improvementAdvisorSection">
             <div class="glass-panel dashboard-widget">
               <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-graduation-cap" style="color: var(--accent-gold);"></i> Loan Improvement Advisor
@@ -274,7 +239,7 @@
           </div>
 
           <!-- Sessions / Global History Sidebar -->
-          <div class="dashboard-section">
+          <div class="dashboard-section" id="sessionHistorySection">
             <div class="glass-panel dashboard-widget">
               <h3 style="font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> Session History
