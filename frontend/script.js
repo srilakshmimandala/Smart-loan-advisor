@@ -530,7 +530,7 @@ async function loadDashboardData(customerId) {
       updateRecommendationCards(recsData.recommendations || {}, compList, customerId);
       updateEligibilityBadges(recsData.eligibility || {});
       updateLoanAssessmentSummary(profile, recsData.recommendations || {}, compList);
-      updateCreditAnalysisCard(recsData.credit_tier_analysis);
+      updateCreditAnalysisCard(recsData.credit_tier_analysis, profile);
       renderCharts(compList);
     } else {
       document.getElementById("recommendationsContainer").innerHTML = `
@@ -673,7 +673,7 @@ function updateLoanAssessmentSummary(profile, recsObj, comparisonsList) {
   document.getElementById("summaryEmiBurdenLabel").innerText = emiBurdenText + (newEmi > 0 ? ` (₹${Math.round(newEmi).toLocaleString()}/mo)` : "");
 }
 
-function updateCreditAnalysisCard(analysis) {
+function updateCreditAnalysisCard(analysis, profile) {
   const section = document.getElementById("creditAnalysisSection");
   if (!section) return;
   if (!analysis) {
@@ -716,6 +716,32 @@ function updateCreditAnalysisCard(analysis) {
   const rateTierVal = document.getElementById("cardRateTierVal");
   if (rateTierVal) {
     rateTierVal.innerText = analysis.rate_tier || "--";
+  }
+
+  // Calculate & update Approval Probability
+  let approvalProbability = 60;
+  if (profile) {
+    const credit_score = Number(profile.credit_score) || 0;
+    const monthly_income = Number(String(profile.monthly_income).replace(/[₹$,]/g, '')) || 0;
+    const existing_emis = Number(String(profile.existing_emis).replace(/[₹$,]/g, '')) || 0;
+    const dti = monthly_income > 0 ? (existing_emis / monthly_income) * 100 : 0;
+
+    if (credit_score >= 750) approvalProbability += 20;
+    if (credit_score >= 700) approvalProbability += 10;
+    if (dti < 30) approvalProbability += 10;
+    if (dti < 20) approvalProbability += 5;
+    if (credit_score < 600) approvalProbability -= 20;
+    if (dti > 40) approvalProbability -= 10;
+    approvalProbability = Math.max(0, Math.min(100, approvalProbability));
+  }
+  
+  const cardProbVal = document.getElementById("cardProbabilityVal");
+  if (cardProbVal) {
+    cardProbVal.innerText = Math.round(approvalProbability) + "%";
+  }
+  const cardProbBar = document.getElementById("cardProbabilityBar");
+  if (cardProbBar) {
+    cardProbBar.style.width = approvalProbability + "%";
   }
   
   const explainerText = document.getElementById("creditExplainerText");
@@ -1204,7 +1230,7 @@ function initWhatIfSimulator(profile, customerId) {
           preferred_tenure: simulatedTenure
         };
         updateLoanAssessmentSummary(simulatedProfile, result.recommendations || {}, compList);
-        updateCreditAnalysisCard(result.credit_tier_analysis);
+        updateCreditAnalysisCard(result.credit_tier_analysis, simulatedProfile);
         
         // 3. Update simulation results section
         const dti = result.dti_ratio || 0;
@@ -1232,7 +1258,7 @@ function initWhatIfSimulator(profile, customerId) {
                 updateEligibilityBadges(window.originalEligibility);
                 updateRecommendationCards(window.originalRecommendations);
                 updateLoanAssessmentSummary(window.currentProfile, window.originalRecommendations || {}, window.originalComparisons);
-                updateCreditAnalysisCard(window.originalCreditTierAnalysis);
+                updateCreditAnalysisCard(window.originalCreditTierAnalysis, window.currentProfile);
                 document.getElementById('simulationResults').innerHTML = '<em>Reset to original results.</em>';
                 // Also restore original charts
                 if (window.originalComparisons && window.originalComparisons.length > 0) {

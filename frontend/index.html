@@ -105,46 +105,7 @@
         <!-- Left Column: Core recommendations, comparisons & tracking -->
         <div class="grid-left-col">
           
-          <!-- Loan Assessment Summary Bar -->
-          <div class="dashboard-section" id="assessmentSummarySection" style="display: none; margin-bottom: 30px;">
-            <div class="section-title">
-              <h3>Loan Assessment Summary <span>Core Profile Analysis</span></h3>
-            </div>
-            <div class="glass-panel assessment-summary-bar">
-              <!-- 1. Eligibility Score -->
-              <div class="assessment-metric">
-                <div class="metric-label">Eligibility Score</div>
-                <div class="metric-value" id="summaryEligibilityVal">--%</div>
-                <div class="progress-bar-container mini">
-                  <div class="progress-bar" id="summaryEligibilityBar"></div>
-                </div>
-              </div>
-              
-              <!-- 2. Approval Probability -->
-              <div class="assessment-metric">
-                <div class="metric-label">Approval Probability</div>
-                <div class="metric-value" id="summaryProbabilityVal">--%</div>
-                <div class="progress-bar-container mini">
-                  <div class="progress-bar" id="summaryProbabilityBar"></div>
-                </div>
-              </div>
-              
-              <!-- 3. Risk Category -->
-              <div class="assessment-metric">
-                <div class="metric-label">Risk Category</div>
-                <div class="metric-value" id="summaryRiskVal">
-                  <span id="summaryRiskDot">⚫</span> <span id="summaryRiskText">--</span>
-                </div>
-              </div>
-              
-              <!-- 4. EMI Burden -->
-              <div class="assessment-metric">
-                <div class="metric-label">EMI Burden</div>
-                <div class="metric-value" id="summaryEmiBurdenVal">--%</div>
-                <div class="metric-subtext" id="summaryEmiBurdenLabel">--</div>
-              </div>
-            </div>
-          </div>
+
 
           <!-- Loan Assessment Overview (Credit Score Impact Analysis) -->
           <div class="dashboard-section" id="creditAnalysisSection" style="display: none; margin-bottom: 30px;">
@@ -171,7 +132,7 @@
                 </div>
               </div>
               
-              <!-- Row 2: 3 Stat Boxes side by side -->
+              <!-- Row 2: 4 Stat Boxes side by side -->
               <div class="credit-stats-row">
                 <div class="stat-box">
                   <div class="stat-label">Eligibility Score</div>
@@ -186,6 +147,13 @@
                 <div class="stat-box">
                   <div class="stat-label">Interest Rate Tier You Qualify For</div>
                   <div class="stat-value" id="cardRateTierVal" style="font-size: 15px;">--</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">Approval Probability</div>
+                  <div class="stat-value" id="cardProbabilityVal">--%</div>
+                  <div class="progress-bar-container mini">
+                    <div class="progress-bar" id="cardProbabilityBar" style="background: var(--color-eligible);"></div>
+                  </div>
                 </div>
               </div>
               
