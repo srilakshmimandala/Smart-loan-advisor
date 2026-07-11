@@ -1229,7 +1229,32 @@ def loan_improvement_advisor(customer_id):
             
         eligibility = recs["eligibility_data"]
         
-        # Call Gemini to write a customized 3-month action plan
+        # Determine target loan category
+        purpose = profile.get("loan_purpose", "Personal")
+        purpose_lower = purpose.lower()
+        if "home" in purpose_lower:
+            target_category = "Home Loan"
+        elif "business" in purpose_lower:
+            target_category = "Business Loan"
+        elif "vehicle" in purpose_lower or "auto" in purpose_lower:
+            target_category = "Auto Loan"
+        elif "education" in purpose_lower or "student" in purpose_lower:
+            target_category = "Education Loan"
+        else:
+            target_category = "Personal Loan"
+            
+        cat_eligibility = eligibility.get('loan_type_eligibility', {}).get(target_category, {})
+        status = cat_eligibility.get("status", "Eligible")
+        
+        # If already fully approved/eligible, skip plan generation
+        if status == "Eligible":
+            return jsonify({
+                "status": "success",
+                "timeline": [],
+                "message": f"You are already fully eligible for your desired {target_category}. No improvements are required!"
+            }), 200
+            
+        # Call Gemini to write a customized 3-month action plan grounded in the correct target category
         model = get_raw_gemini_model()
         prompt = f"""
         You are the Loan Improvement Advisor. Analyze this client's details and eligibility:
@@ -1239,11 +1264,19 @@ def loan_improvement_advisor(customer_id):
         - Existing EMIs: INR {profile['existing_emis']:,.0f}
         - Credit Score: {profile['credit_score']}
         - Desired Amount: INR {profile['desired_amount']:,.0f}
+        - Target Loan Type: {target_category}
         
-        Eligibility Failures / Rejections:
+        Eligibility Status for Target Loan:
+        - Category: {target_category}
+        - Status: {status}
+        - Reason: {cat_eligibility.get('reason', 'N/A')}
+        
+        All Eligibility Details:
         {json.dumps(eligibility.get('loan_type_eligibility', {}))}
         
-        Write a personalized, highly structured 3-month action plan to improve their creditworthiness and loan eligibility.
+        Write a personalized, highly structured 3-month action plan specifically focused on helping the customer qualify for a {target_category}.
+        Do NOT suggest actions or reference requirements for unrelated loan types (such as business loans if the user is applying for a personal loan).
+        
         Output ONLY a JSON string with the key 'timeline' containing a list of exactly 3 objects (one for each month):
         - month: "Month 1", "Month 2", "Month 3"
         - title: Short title of the action (e.g. "Reduce Credit Card Outstanding")
@@ -1266,7 +1299,7 @@ def loan_improvement_advisor(customer_id):
             text = "\n".join(lines).strip()
             
         plan = json.loads(text)
-        return jsonify({"status": "success", "timeline": plan.get("timeline", [])}), 200
+        return jsonify({"status": "success", "timeline": plan.get("timeline", []), "message": ""}), 200
         
     except Exception as e:
         logger.error(f"Error in Loan Improvement Advisor: {str(e)}")

@@ -1362,8 +1362,9 @@ async function loadImprovementPlan(customerId) {
     
     if (timeline.length === 0) {
       container.innerHTML = `
-        <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
-          All loans are fully approved. No profile improvements needed.
+        <div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px; font-weight: 500; line-height: 1.6;">
+          <i class="fa-solid fa-circle-check" style="color: var(--color-approved); margin-right: 8px; font-size: 18px; vertical-align: middle;"></i>
+          ${data.message || "You are already fully eligible. No profile improvements needed."}
         </div>
       `;
       return;
