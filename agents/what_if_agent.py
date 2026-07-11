@@ -484,8 +484,8 @@ def run_what_if_agent(user_query: str, customer_id: int) -> dict:
             trace_log.append({
                 "step": len(trace_log) + 1,
                 "tool": tool_name,
-                "inputs": tool_args,
-                "outputs": result
+                "input": tool_args,
+                "output": result
             })
             
             # Feed tool execution result back to LLM

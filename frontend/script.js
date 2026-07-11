@@ -1331,8 +1331,8 @@ function initWhatIfSimulator(profile, customerId) {
             stepDiv.style.marginBottom = "8px";
             stepDiv.innerHTML = `
               <span style="color: #fbbf24; font-weight: bold;">Step ${step.step}: Tool called: ${step.tool}</span><br>
-              <span style="color: #9ca3af;">Inputs:</span> <span style="color: #a78bfa; word-break: break-all;">${JSON.stringify(step.inputs)}</span><br>
-              <span style="color: #9ca3af;">Outputs:</span> <span style="color: #34d399; word-break: break-all;">${JSON.stringify(step.outputs)}</span>
+              <span style="color: #9ca3af;">Inputs:</span> <span style="color: #a78bfa; word-break: break-all;">${JSON.stringify(step.input)}</span><br>
+              <span style="color: #9ca3af;">Outputs:</span> <span style="color: #34d399; word-break: break-all;">${JSON.stringify(step.output)}</span>
             `;
             agentTraceContainer.appendChild(stepDiv);
           });
