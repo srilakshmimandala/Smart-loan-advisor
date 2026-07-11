@@ -852,9 +852,6 @@ function updateRecommendationCards(recsObj, comparisonsList, customerId) {
           <h3>${rec.bank_name}</h3>
           <p>${typeLabel} — Rank #${rec.rank}</p>
         </div>
-        <div class="suitability-badge">
-          Match ${rec.suitability_score}%
-        </div>
       </div>
       
       <p class="rec-body-text">${rec.why_suits}</p>

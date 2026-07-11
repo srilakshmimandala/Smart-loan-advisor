@@ -318,7 +318,14 @@ def run_loan_advisory_pipeline(raw_profile, customer_id=None, pdf_path=None):
                     ear = ((1 + interest_rate / 1200) ** 12 - 1) * 100
                     
                     new_dti = ((validated_profile["existing_emis"] + new_emi) / validated_profile["monthly_income"]) * 100
-                    aff_score = max(0, min(100, int(100 - (new_dti * 1.5))))
+                    dti_score = max(0, min(100, 100 - (new_dti * 2.0)))
+                    rate_score = max(0, min(100, 100 - (interest_rate - 8.0) * (100.0 / 12.0)))
+                    
+                    min_credit = p.get("min_credit_score") or 600
+                    credit_diff = validated_profile["credit_score"] - min_credit
+                    margin_score = max(0, min(100, (credit_diff / max(1, 850 - min_credit)) * 100))
+                    
+                    aff_score = round(0.40 * dti_score + 0.40 * rate_score + 0.20 * margin_score)
                     
                     comp_list.append({
                         "loan_id": p["loan_id"],
