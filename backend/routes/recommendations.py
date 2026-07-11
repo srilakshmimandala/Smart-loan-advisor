@@ -1076,6 +1076,7 @@ def what_if_simulator():
     """
     Feature 2: What-If Scenario Simulator.
     Instantly recalculates DTI, EMIs, and product eligibility.
+    If 'query' is provided in request JSON, runs the tool-calling AI agent.
     """
     try:
         data = request.json
@@ -1083,6 +1084,14 @@ def what_if_simulator():
             return jsonify({"status": "error", "message": "customer_id is required."}), 400
             
         customer_id = int(data["customer_id"])
+        
+        # Check if natural language query is passed for the AI Agent
+        query = data.get("query")
+        if query:
+            from agents.what_if_agent import run_what_if_agent
+            agent_res = run_what_if_agent(query, customer_id)
+            return jsonify(agent_res), 200
+            
         profile = get_customer_profile(customer_id)
         if not profile:
             return jsonify({"status": "error", "message": "Customer profile not found."}), 404

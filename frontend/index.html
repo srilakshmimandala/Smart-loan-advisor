@@ -296,6 +296,36 @@
 
               <div id="simulationResults" style="display: none; margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; color: var(--text-secondary); line-height: 1.8;">
               </div>
+
+              <div style="margin: 20px 0; border-top: 1px dashed var(--border-glass);"></div>
+
+              <h4 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-robot" style="color: var(--accent-gold);"></i> Ask What-If AI Agent
+              </h4>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                Type a scenario in plain English (e.g., "what if my income was 20% higher and credit score improved to 750?")
+              </p>
+              
+              <div class="calc-control">
+                <textarea id="agentQueryInput" rows="3" class="form-input" style="width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-primary); padding: 10px; font-size: 13px; font-family: inherit; resize: none;" placeholder="Ask the advisor agent a scenario..."></textarea>
+              </div>
+
+              <button id="askAgentBtn" class="primary-btn" style="width: 100%; justify-content: center; margin-top: 8px; background: linear-gradient(135deg, #00f2fe 0%, #8b5cf6 100%); border: none;">
+                <i class="fa-solid fa-brain" style="margin-right: 6px;"></i> Run AI Simulation
+              </button>
+
+              <div id="agentResultsBox" style="display: none; margin-top: 20px; padding: 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12.5px; color: var(--text-primary); line-height: 1.8;">
+                <h5 style="font-weight: 700; color: var(--accent-gold); margin-bottom: 8px;"><i class="fa-solid fa-comment-dots"></i> Agent Response</h5>
+                <div id="agentResponseText" style="margin-bottom: 16px; color: var(--text-secondary);"></div>
+                
+                <details style="cursor: pointer; font-size: 11.5px; border-top: 1px solid var(--border-glass); padding-top: 12px;">
+                  <summary style="font-weight: bold; color: var(--text-secondary); outline: none; margin-bottom: 8px;">
+                    <i class="fa-solid fa-list-check" style="color: var(--accent-gold);"></i> View AI Reasoning Trace
+                  </summary>
+                  <div id="agentTraceContainer" style="margin-top: 8px; font-family: monospace; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; display: flex; flex-direction: column; gap: 8px; line-height: 1.4;">
+                  </div>
+                </details>
+              </div>
             </div>
           </div>
 

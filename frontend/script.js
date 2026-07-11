@@ -1279,6 +1279,76 @@ function initWhatIfSimulator(profile, customerId) {
         this.disabled = false;
     }
   });
+
+  // Conversational What-If AI Agent integration
+  const askAgentBtn = document.getElementById("askAgentBtn");
+  const agentQueryInput = document.getElementById("agentQueryInput");
+  const agentResultsBox = document.getElementById("agentResultsBox");
+  const agentResponseText = document.getElementById("agentResponseText");
+  const agentTraceContainer = document.getElementById("agentTraceContainer");
+  
+  if (askAgentBtn) {
+    askAgentBtn.addEventListener("click", async function() {
+      const query = agentQueryInput.value.trim();
+      if (!query) {
+        alert("Please enter a scenario query first.");
+        return;
+      }
+      
+      // Show loading status
+      askAgentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Simulating...';
+      askAgentBtn.disabled = true;
+      agentResultsBox.style.display = "block";
+      agentResponseText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 8px;"></i> AI Agent is thinking & sequencing tool calls...';
+      agentTraceContainer.innerHTML = '<span style="color: #9ca3af;">Initializing agent run...</span>';
+      
+      try {
+        const response = await fetch(`${BASE_URL}/api/recommendations/what-if`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_id: customerId,
+            query: query
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === "error" || !response.ok) {
+          throw new Error(result.message || "Failed to run agent simulation.");
+        }
+        
+        // Show response (replace newlines with <br> for styling)
+        agentResponseText.innerHTML = result.response.replace(/\n/g, '<br>');
+        
+        // Build trace logs
+        agentTraceContainer.innerHTML = '';
+        if (result.trace && result.trace.length > 0) {
+          result.trace.forEach(step => {
+            const stepDiv = document.createElement("div");
+            stepDiv.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+            stepDiv.style.paddingBottom = "8px";
+            stepDiv.style.marginBottom = "8px";
+            stepDiv.innerHTML = `
+              <span style="color: #fbbf24; font-weight: bold;">Step ${step.step}: Tool called: ${step.tool}</span><br>
+              <span style="color: #9ca3af;">Inputs:</span> <span style="color: #a78bfa; word-break: break-all;">${JSON.stringify(step.inputs)}</span><br>
+              <span style="color: #9ca3af;">Outputs:</span> <span style="color: #34d399; word-break: break-all;">${JSON.stringify(step.outputs)}</span>
+            `;
+            agentTraceContainer.appendChild(stepDiv);
+          });
+        } else {
+          agentTraceContainer.innerHTML = '<span style="color: #9ca3af;">No tools were invoked by the agent.</span>';
+        }
+      } catch (err) {
+        console.error("AI Simulation failed:", err);
+        agentResponseText.innerHTML = `<span style="color: var(--color-rejected);"><i class="fa-solid fa-triangle-exclamation"></i> Error running AI simulation: ${err.message}</span>`;
+        agentTraceContainer.innerHTML = `<span style="color: var(--color-rejected);">${err.stack || err.message}</span>`;
+      } finally {
+        askAgentBtn.innerHTML = '<i class="fa-solid fa-brain" style="margin-right: 6px;"></i> Run AI Simulation';
+        askAgentBtn.disabled = false;
+      }
+    });
+  }
 }
 
 // Loan Improvement Advisor Action Plan
