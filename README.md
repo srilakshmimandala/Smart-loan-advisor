@@ -68,12 +68,8 @@ graph TD
 ## 📂 Project Structure
 
 ```
-├── agents/                     # CrewAI Agent Definitions
-│   ├── data_collector.py
-│   ├── eligibility_analyzer.py
-│   ├── loan_comparator.py
-│   ├── recommendation_engine.py
-│   └── report_generator.py
+├── agents/                     # Financial Agent Definitions
+│   └── what_if_agent.py
 ├── backend/                    # Flask Server & Routes
 │   ├── routes/
 │   │   ├── customer.py
@@ -96,7 +92,6 @@ graph TD
 │   ├── llm_client.py
 │   ├── logger.py
 │   └── pdf_report.py
-├── crew_main.py                # Main orchestration runner
 ├── requirements.txt            # Python dependencies
 └── README.md                   # Setup and usage guide
 ```
